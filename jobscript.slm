@@ -28,5 +28,10 @@
 # send mail to this address
 #SBATCH --mail-user=fjm30@bath.ac.uk
 
+# load modules
+module load python/3.4.2
+module load tensorflow/1.2.1
+module load tensorflow-gpu/1.3.0
+
 # run the application
 python -m main
