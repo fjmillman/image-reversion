@@ -1,4 +1,6 @@
-from __future__ import division
+"""
+Extracted from https://github.com/yenchenlin/pix2pix-tensorflow
+"""
 import os
 import time
 from glob import glob
@@ -10,11 +12,27 @@ from ops import *
 from utils import *
 
 class GAN(object):
-    def __init__(self, sess, image_size=256,
-                 batch_size=1, sample_size=1, output_size=256,
-                 gf_dim=64, df_dim=64, L1_lambda=100,
-                 input_c_dim=3, output_c_dim=3, dataset_name='enhancements',
-                 checkpoint_dir=None, sample_dir=None):
+    def __init__(
+            self,
+            sess,
+            image_size=256,
+            batch_size=1,
+            sample_size=1,
+            output_size=256,
+            gf_dim=64,
+            df_dim=64,
+            L1_lambda=100,
+            input_c_dim=3,
+            output_c_dim=3,
+            dataset_name='dataset',
+            checkpoint_dir=None,
+            sample_dir=None,
+            test_dir=None,
+            learning_rate=0.0002,
+            beta1=0.5,
+            epoch=200,
+            train_size=1e8
+    ):
         """
         Args:
             sess: TensorFlow session
@@ -40,7 +58,6 @@ class GAN(object):
 
         self.L1_lambda = L1_lambda
 
-        # batch normalization : deals with poor initialization helps gradient flow
         self.d_bn1 = batch_norm(name='d_bn1')
         self.d_bn2 = batch_norm(name='d_bn2')
         self.d_bn3 = batch_norm(name='d_bn3')
@@ -61,9 +78,16 @@ class GAN(object):
         self.g_bn_d6 = batch_norm(name='g_bn_d6')
         self.g_bn_d7 = batch_norm(name='g_bn_d7')
 
-        self.dataset_name = dataset_name
+        self.learning_rate = learning_rate
+        self.beta1 = beta1
+        self.epoch = epoch
+        self.train_size = train_size
+
         self.checkpoint_dir = checkpoint_dir
         self.sample_dir = sample_dir
+        self.test_dir = test_dir
+
+        self.dataset_name = dataset_name
         self.build_model()
 
     def build_model(self):
@@ -108,116 +132,7 @@ class GAN(object):
 
         self.saver = tf.train.Saver()
 
-
-    def load_random_samples(self):
-        data = np.random.choice(glob('./datasets/{}/val/*.jpg'.format(self.dataset_name)), self.batch_size)
-        sample = [load_data(sample_file) for sample_file in data]
-
-        if (self.is_grayscale):
-            sample_images = np.array(sample).astype(np.float32)[:, :, :, None]
-        else:
-            sample_images = np.array(sample).astype(np.float32)
-        return sample_images
-
-    def sample_model(self, sample_dir, epoch, idx):
-        sample_images = self.load_random_samples()
-        samples, d_loss, g_loss = self.sess.run(
-            [self.fake_B_sample, self.d_loss, self.g_loss],
-            feed_dict={self.real_data: sample_images}
-        )
-        save_images(samples, [self.batch_size, 1],
-                    './{}/train_{:02d}_{:04d}.png'.format(sample_dir, epoch, idx))
-        print("[Sample] d_loss: {:.8f}, g_loss: {:.8f}".format(d_loss, g_loss))
-
-    def train(self, lr, beta1, number_of_epochs, train_size):
-        d_optim = tf.train.AdamOptimizer(lr, beta1=beta1) \
-                          .minimize(self.d_loss, var_list=self.d_vars)
-        g_optim = tf.train.AdamOptimizer(lr, beta1=beta1) \
-                          .minimize(self.g_loss, var_list=self.g_vars)
-
-        init_op = tf.global_variables_initializer()
-        self.sess.run(init_op)
-
-        self.g_sum = tf.summary.merge([self.d__sum,
-            self.fake_B_sum, self.d_loss_fake_sum, self.g_loss_sum])
-        self.d_sum = tf.summary.merge([self.d_sum, self.d_loss_real_sum, self.d_loss_sum])
-        self.writer = tf.summary.FileWriter("./logs", self.sess.graph)
-
-        counter = 1
-        start_time = time.time()
-
-        if self.load(self.checkpoint_dir):
-            print(" [*] Load SUCCESS")
-        else:
-            print(" [!] Load failed...")
-
-        for epoch in xrange(number_of_epochs):
-            enhanced_data = glob('./datasets/{}/train/enhanced/*.jpg'.format(self.dataset_name))
-            original_data = glob('./datasets/{}/train/original/*.jpg'.format(self.dataset_name))
-            data = list(zip(enhanced_data, original_data))
-            batch_idxs = min(len(data), train_size) // self.batch_size
-
-            for idx in xrange(0, batch_idxs):
-                batch_files = data[idx*self.batch_size:(idx+1)*self.batch_size]
-                batch = [load_data(enhanced_image_path=batch_file[0], original_image_path=batch_file[1]) for batch_file in batch_files]
-                if (self.is_grayscale):
-                    batch_images = np.array(batch).astype(np.float32)[:, :, :, None]
-                else:
-                    batch_images = np.array(batch).astype(np.float32)
-
-                # Update D network
-                _, summary_str = self.sess.run([d_optim, self.d_sum],
-                                               feed_dict={ self.real_data: batch_images })
-                self.writer.add_summary(summary_str, counter)
-
-                # Update G network
-                _, summary_str = self.sess.run([g_optim, self.g_sum],
-                                               feed_dict={ self.real_data: batch_images })
-                self.writer.add_summary(summary_str, counter)
-
-                # Run g_optim twice to make sure that d_loss does not go to zero (different from paper)
-                _, summary_str = self.sess.run([g_optim, self.g_sum],
-                                               feed_dict={ self.real_data: batch_images })
-                self.writer.add_summary(summary_str, counter)
-
-                errD_fake = self.d_loss_fake.eval({self.real_data: batch_images})
-                errD_real = self.d_loss_real.eval({self.real_data: batch_images})
-                errG = self.g_loss.eval({self.real_data: batch_images})
-
-                counter += 1
-                print("Epoch: [%2d] [%4d/%4d] time: %4.4f, d_loss: %.8f, g_loss: %.8f" \
-                    % (epoch, idx, batch_idxs,
-                        time.time() - start_time, errD_fake+errD_real, errG))
-
-                if np.mod(counter, 100) == 1:
-                    self.sample_model(self.sample_dir, epoch, idx)
-
-                if np.mod(counter, 500) == 2:
-                    self.save(self.checkpoint_dir, counter)
-
-    def discriminator(self, image, y=None, reuse=False):
-
-        with tf.variable_scope("discriminator") as scope:
-
-            # image is 256 x 256 x (input_c_dim + output_c_dim)
-            if reuse:
-                tf.get_variable_scope().reuse_variables()
-            else:
-                assert tf.get_variable_scope().reuse == False
-
-            h0 = lrelu(conv2d(image, self.df_dim, name='d_h0_conv'))
-            # h0 is (128 x 128 x self.df_dim)
-            h1 = lrelu(self.d_bn1(conv2d(h0, self.df_dim*2, name='d_h1_conv')))
-            # h1 is (64 x 64 x self.df_dim*2)
-            h2 = lrelu(self.d_bn2(conv2d(h1, self.df_dim*4, name='d_h2_conv')))
-            # h2 is (32x 32 x self.df_dim*4)
-            h3 = lrelu(self.d_bn3(conv2d(h2, self.df_dim*8, d_h=1, d_w=1, name='d_h3_conv')))
-            # h3 is (16 x 16 x self.df_dim*8)
-            h4 = linear(tf.reshape(h3, [self.batch_size, -1]), 1, 'd_h3_lin')
-
-            return tf.nn.sigmoid(h4), h4
-
-    def generator(self, image, y=None):
+    def generator(self, image):
         with tf.variable_scope("generator") as scope:
 
             s = self.output_size
@@ -289,8 +204,27 @@ class GAN(object):
 
             return tf.nn.tanh(self.d8)
 
-    def sampler(self, image, y=None):
+    def discriminator(self, image, reuse=False):
+        with tf.variable_scope("discriminator") as scope:
+            # image is 256 x 256 x (input_c_dim + output_c_dim)
+            if reuse:
+                tf.get_variable_scope().reuse_variables()
+            else:
+                assert tf.get_variable_scope().reuse == False
 
+            h0 = lrelu(conv2d(image, self.df_dim, name='d_h0_conv'))
+            # h0 is (128 x 128 x self.df_dim)
+            h1 = lrelu(self.d_bn1(conv2d(h0, self.df_dim*2, name='d_h1_conv')))
+            # h1 is (64 x 64 x self.df_dim*2)
+            h2 = lrelu(self.d_bn2(conv2d(h1, self.df_dim*4, name='d_h2_conv')))
+            # h2 is (32x 32 x self.df_dim*4)
+            h3 = lrelu(self.d_bn3(conv2d(h2, self.df_dim*8, d_h=1, d_w=1, name='d_h3_conv')))
+            # h3 is (16 x 16 x self.df_dim*8)
+            h4 = linear(tf.reshape(h3, [self.batch_size, -1]), 1, 'd_h3_lin')
+
+            return tf.nn.sigmoid(h4), h4
+
+    def sampler(self, image):
         with tf.variable_scope("generator") as scope:
             scope.reuse_variables()
 
@@ -363,6 +297,91 @@ class GAN(object):
 
             return tf.nn.tanh(self.d8)
 
+    def load_random_samples(self):
+        enhanced_data = glob('./datasets/{}/train/enhanced/*.jpg'.format(self.dataset_name))
+        original_data = glob('./datasets/{}/train/original/*.jpg'.format(self.dataset_name))
+        data = np.random.choice(list(zip(enhanced_data, original_data)), self.batch_size)
+        sample = [load_data(enhanced_image_path=sample_file[0], original_image_path=sample_file[1]) for sample_file in data]
+
+        if self.is_grayscale:
+            sample_images = np.array(sample).astype(np.float32)[:, :, :, None]
+        else:
+            sample_images = np.array(sample).astype(np.float32)
+
+        return sample_images
+
+    def sample_model(self, sample_dir, epoch, idx):
+        sample_images = self.load_random_samples()
+        samples, d_loss, g_loss = self.sess.run(
+            [self.fake_B_sample, self.d_loss, self.g_loss],
+            feed_dict={self.real_data: sample_images}
+        )
+        save_images(samples, [self.batch_size, 1], './{}/train_{:02d}_{:04d}.png'.format(sample_dir, epoch, idx))
+        print("[Sample] d_loss: {:.8f}, g_loss: {:.8f}".format(d_loss, g_loss))
+
+    def train(self):
+        d_optim = tf.train.AdamOptimizer(self.learning_rate, beta1=self.beta1).minimize(self.d_loss, var_list=self.d_vars)
+        g_optim = tf.train.AdamOptimizer(self.learning_rate, beta1=self.beta1).minimize(self.g_loss, var_list=self.g_vars)
+
+        init_op = tf.global_variables_initializer()
+        self.sess.run(init_op)
+
+        self.g_sum = tf.summary.merge([self.d__sum, self.fake_B_sum, self.d_loss_fake_sum, self.g_loss_sum])
+        self.d_sum = tf.summary.merge([self.d_sum, self.d_loss_real_sum, self.d_loss_sum])
+        self.writer = tf.summary.FileWriter("./logs", self.sess.graph)
+
+        counter = 1
+        start_time = time.time()
+
+        if self.load(self.checkpoint_dir):
+            print(" [*] Load SUCCESS")
+        else:
+            print(" [!] Load failed...")
+
+        for epoch in xrange(self.epoch):
+            enhanced_data = glob('./datasets/{}/train/enhanced/*.jpg'.format(self.dataset_name))
+            original_data = glob('./datasets/{}/train/original/*.jpg'.format(self.dataset_name))
+            data = list(zip(enhanced_data, original_data))
+            batch_idxs = min(len(data), self.train_size) // self.batch_size
+
+            for idx in xrange(0, batch_idxs):
+                batch_files = data[idx*self.batch_size:(idx+1)*self.batch_size]
+                batch = [load_data(enhanced_image_path=batch_file[0], original_image_path=batch_file[1]) for batch_file in batch_files]
+                if self.is_grayscale:
+                    batch_images = np.array(batch).astype(np.float32)[:, :, :, None]
+                else:
+                    batch_images = np.array(batch).astype(np.float32)
+
+                # Update D network
+                _, summary_str = self.sess.run([d_optim, self.d_sum],
+                                               feed_dict={ self.real_data: batch_images })
+                self.writer.add_summary(summary_str, counter)
+
+                # Update G network
+                _, summary_str = self.sess.run([g_optim, self.g_sum],
+                                               feed_dict={ self.real_data: batch_images })
+                self.writer.add_summary(summary_str, counter)
+
+                # Run g_optim twice to make sure that d_loss does not go to zero (different from paper)
+                _, summary_str = self.sess.run([g_optim, self.g_sum],
+                                               feed_dict={ self.real_data: batch_images })
+                self.writer.add_summary(summary_str, counter)
+
+                errD_fake = self.d_loss_fake.eval({self.real_data: batch_images})
+                errD_real = self.d_loss_real.eval({self.real_data: batch_images})
+                errG = self.g_loss.eval({self.real_data: batch_images})
+
+                counter += 1
+                print("Epoch: [%2d] [%4d/%4d] time: %4.4f, d_loss: %.8f, g_loss: %.8f" \
+                    % (epoch, idx, batch_idxs,
+                        time.time() - start_time, errD_fake+errD_real, errG))
+
+                if np.mod(counter, 100) == 1:
+                    self.sample_model(self.sample_dir, epoch, idx)
+
+                if np.mod(counter, 500) == 2:
+                    self.save(self.checkpoint_dir, counter)
+
     def save(self, checkpoint_dir, step):
         model_name = "GAN.model"
         model_dir = "%s_%s_%s" % (self.dataset_name, self.batch_size, self.output_size)
@@ -371,9 +390,7 @@ class GAN(object):
         if not os.path.exists(checkpoint_dir):
             os.makedirs(checkpoint_dir)
 
-        self.saver.save(self.sess,
-                        os.path.join(checkpoint_dir, model_name),
-                        global_step=step)
+        self.saver.save(self.sess, os.path.join(checkpoint_dir, model_name), global_step=step)
 
     def load(self, checkpoint_dir):
         print(" [*] Reading checkpoint...")
@@ -389,27 +406,23 @@ class GAN(object):
         else:
             return False
 
-    def test(self, test_dir):
+    def test(self):
         init_op = tf.global_variables_initializer()
         self.sess.run(init_op)
 
-        sample_files = glob('./datasets/{}/val/*.jpg'.format(self.dataset_name))
+        enhanced_sample_files = glob('./datasets/{}/val/enhanced/*.jpg'.format(self.dataset_name))
+        original_sample_files = glob('./datasets/{}/val/original/*.jpg'.format(self.dataset_name))
+        sample_files = list(zip(enhanced_sample_files, original_sample_files))
 
-        # sort testing input
-        n = [int(i) for i in map(lambda x: x.split('/')[-1].split('.jpg')[0], sample_files)]
-        sample_files = [x for (y, x) in sorted(zip(n, sample_files))]
-
-        # load testing input
         print("Loading testing images ...")
-        sample = [load_data(sample_file, is_test=True) for sample_file in sample_files]
+        sample = [load_data(enhanced_image_path=sample_file[0], original_image_path=sample_file[1], is_test=True) for sample_file in sample_files]
 
-        if (self.is_grayscale):
+        if self.is_grayscale:
             sample_images = np.array(sample).astype(np.float32)[:, :, :, None]
         else:
             sample_images = np.array(sample).astype(np.float32)
 
-        sample_images = [sample_images[i:i+self.batch_size]
-                         for i in xrange(0, len(sample_images), self.batch_size)]
+        sample_images = [sample_images[i:i+self.batch_size] for i in xrange(0, len(sample_images), self.batch_size)]
         sample_images = np.array(sample_images)
         print(sample_images.shape)
 
@@ -422,8 +435,5 @@ class GAN(object):
         for i, sample_image in enumerate(sample_images):
             idx = i+1
             print("sampling image ", idx)
-            samples = self.sess.run(
-                self.fake_B_sample,
-                feed_dict={self.real_data: sample_image}
-            )
-            save_images(samples, [self.batch_size, 1], './{}/test_{:04d}.png'.format(test_dir, idx))
+            samples = self.sess.run(self.fake_B_sample, feed_dict={self.real_data: sample_image})
+            save_images(samples, [self.batch_size, 1], './{}/test_{:04d}.png'.format(self.test_dir, idx))

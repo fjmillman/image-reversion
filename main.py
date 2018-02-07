@@ -59,18 +59,18 @@ def main():
             output_size=args.fine_size,
             dataset_name=args.dataset_name,
             checkpoint_dir=args.checkpoint_dir,
-            sample_dir=args.sample_dir
+            sample_dir=args.sample_dir,
+            test_dir=args.test_dir,
+            beta1=args.beta1,
+            learning_rate=args.lr,
+            epoch=args.epoch,
+            train_size=args.train_size
         )
 
         if args.phase == 'train':
-            model.train(
-                beta1=args.beta1,
-                lr=args.lr,
-                number_of_epochs=args.epoch,
-                train_size=args.train_size
-            )
+            model.train()
         else:
-            model.test(args)
+            model.test()
 
 if __name__ == '__main__':
     tf.app.run()
