@@ -3,6 +3,7 @@ Extracted from https://github.com/yenchenlin/pix2pix-tensorflow
 """
 import os
 import scipy.misc
+import pillow
 import numpy as np
 
 def check_folder(dir):
