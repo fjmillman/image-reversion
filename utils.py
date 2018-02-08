@@ -4,6 +4,11 @@ Extracted from https://github.com/yenchenlin/pix2pix-tensorflow
 import scipy.misc
 import numpy as np
 
+def check_folder(dir):
+    if not os.path.exists(dir):
+        os.makedirs(dir)
+    return dir
+
 def load_data(enhanced_image_path, original_image_path, flip=True, is_test=False):
     enhanced_image = imread(enhanced_image_path)
     original_image = imread(original_image_path)

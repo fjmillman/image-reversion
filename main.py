@@ -1,6 +1,5 @@
 import argparse
 import os
-import scipy.misc
 import numpy as np
 
 import tensorflow as tf
