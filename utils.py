@@ -1,6 +1,7 @@
 """
 Extracted from https://github.com/yenchenlin/pix2pix-tensorflow
 """
+import os
 import scipy.misc
 import numpy as np
 
