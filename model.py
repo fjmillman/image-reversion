@@ -24,7 +24,7 @@ class GAN(object):
             L1_lambda=100,
             input_c_dim=3,
             output_c_dim=3,
-            dataset_name='dataset',
+            dataset_name='enhancements',
             checkpoint_dir=None,
             sample_dir=None,
             test_dir=None,
