@@ -10,6 +10,12 @@ def check_folder(dir):
         os.makedirs(dir)
     return dir
 
+def imread(path, grayscale = False):
+    if (grayscale):
+        return scipy.misc.imread(path, flatten = True).astype(np.float)
+    else:
+        return scipy.misc.imread(path).astype(np.float)
+
 def load_data(enhanced_image_path, original_image_path, flip=True, is_test=False):
     enhanced_image = imread(enhanced_image_path)
     original_image = imread(original_image_path)
