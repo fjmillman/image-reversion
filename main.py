@@ -43,7 +43,7 @@ def parse_args():
 
     return parser.parse_args()
 
-def main():
+def main(_):
     args = parse_args()
 
     check_folder(args.checkpoint_dir)
