@@ -300,8 +300,9 @@ class GAN(object):
     def load_random_samples(self):
         enhanced_data = glob('./datasets/{}/train/enhanced/*.jpg'.format(self.dataset_name))
         original_data = glob('./datasets/{}/train/original/*.jpg'.format(self.dataset_name))
-        data = np.random.choice(list(zip(enhanced_data, original_data)), self.batch_size)
-        sample = [load_data(enhanced_image_path=sample_file[0], original_image_path=sample_file[1]) for sample_file in data]
+        data = numpy.array(list(zip(enhanced_data, original_data)))
+        idx = numpy.random.choice(len(data), self.batch_size)
+        sample = [load_data(enhanced_image_path=sample_file[0], original_image_path=sample_file[1]) for sample_file in data[idx]]
 
         if self.is_grayscale:
             sample_images = np.array(sample).astype(np.float32)[:, :, :, None]
