@@ -13,17 +13,17 @@ import tfimage as im
 import threading
 import time
 
-def parse_arguments():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--input_dir", required=True, help="path to folder containing images")
-    parser.add_argument("--output_dir", required=True, help="output path")
-    parser.add_argument("--operation", required=True, choices=["resize", "combine"])
-    parser.add_argument("--workers", type=int, default=1, help="number of workers")
-    parser.add_argument("--pad", action="store_true", help="pad instead of crop for resize operation")
-    parser.add_argument("--size", type=int, default=256, help="size to use for resize operation")
-    parser.add_argument("--b_dir", type=str, help="path to folder containing B images for combine operation")
+parser = argparse.ArgumentParser()
 
-    return parser.parse_args()
+parser.add_argument("--input_dir", required=True, help="path to folder containing images")
+parser.add_argument("--output_dir", required=True, help="output path")
+parser.add_argument("--operation", required=True, choices=["resize", "combine"])
+parser.add_argument("--workers", type=int, default=1, help="number of workers")
+parser.add_argument("--pad", action="store_true", help="pad instead of crop for resize operation")
+parser.add_argument("--size", type=int, default=256, help="size to use for resize operation")
+parser.add_argument("--b_dir", type=str, help="path to folder containing B images for combine operation")
+
+a = parser.parse_args()
 
 def resize(src):
     height, width, _ = src.shape
@@ -123,8 +123,6 @@ def complete():
 
 
 def main():
-    a = parse_arguments()
-
     if not os.path.exists(a.output_dir):
         os.makedirs(a.output_dir)
 
