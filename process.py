@@ -10,19 +10,15 @@ import os
 import tensorflow as tf
 import numpy as np
 import tfimage as im
-import threading
 import time
 
 parser = argparse.ArgumentParser()
-
 parser.add_argument("--input_dir", required=True, help="path to folder containing images")
 parser.add_argument("--output_dir", required=True, help="output path")
 parser.add_argument("--operation", required=True, choices=["resize", "combine"])
-parser.add_argument("--workers", type=int, default=1, help="number of workers")
 parser.add_argument("--pad", action="store_true", help="pad instead of crop for resize operation")
 parser.add_argument("--size", type=int, default=256, help="size to use for resize operation")
 parser.add_argument("--b_dir", type=str, help="path to folder containing B images for combine operation")
-
 a = parser.parse_args()
 
 def resize(src):
@@ -99,7 +95,6 @@ def process(src_path, dst_path):
 
     im.save(dst, dst_path)
 
-complete_lock = threading.Lock()
 start = None
 num_complete = 0
 total = 0
@@ -107,20 +102,18 @@ total = 0
 def complete():
     global num_complete, rate, last_complete
 
-    with complete_lock:
-        num_complete += 1
-        now = time.time()
-        elapsed = now - start
-        rate = num_complete / elapsed
-        if rate > 0:
-            remaining = (total - num_complete) / rate
-        else:
-            remaining = 0
+    num_complete += 1
+    now = time.time()
+    elapsed = now - start
+    rate = num_complete / elapsed
+    if rate > 0:
+        remaining = (total - num_complete) / rate
+    else:
+        remaining = 0
 
-        print("%d/%d complete  %0.2f images/sec  %dm%ds elapsed  %dm%ds remaining" % (num_complete, total, rate, elapsed // 60, elapsed % 60, remaining // 60, remaining % 60))
+    print("%d/%d complete  %0.2f images/sec  %dm%ds elapsed  %dm%ds remaining" % (num_complete, total, rate, elapsed // 60, elapsed % 60, remaining // 60, remaining % 60))
 
-        last_complete = now
-
+    last_complete = now
 
 def main():
     if not os.path.exists(a.output_dir):
@@ -149,43 +142,8 @@ def main():
     global start
     start = time.time()
 
-    if a.workers == 1:
-        with tf.Session() as sess:
-            for src_path, dst_path in zip(src_paths, dst_paths):
-                process(src_path, dst_path)
-                complete()
-    else:
-        queue = tf.train.input_producer(zip(src_paths, dst_paths), shuffle=False, num_epochs=1)
-        dequeue_op = queue.dequeue()
-
-        def worker(coord):
-            with sess.as_default():
-                while not coord.should_stop():
-                    try:
-                        src_path, dst_path = sess.run(dequeue_op)
-                    except tf.errors.OutOfRangeError:
-                        coord.request_stop()
-                        break
-
-                    process(src_path, dst_path)
-                    complete()
-
-        # Initialise epoch counter for the queue
-        local_init_op = tf.local_variables_initializer()
-        with tf.Session() as sess:
-            sess.run(local_init_op)
-
-            coord = tf.train.Coordinator()
-            threads = tf.train.start_queue_runners(coord=coord)
-            for _ in range(a.workers):
-                t = threading.Thread(target=worker, args=(coord,))
-                t.start()
-                threads.append(t)
-
-            try:
-                coord.join(threads)
-            except KeyboardInterrupt:
-                coord.request_stop()
-                coord.join(threads)
+    for src_path, dst_path in zip(src_paths, dst_paths):
+        process(src_path, dst_path)
+        complete()
 
 main()
