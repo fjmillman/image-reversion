@@ -1,5 +1,5 @@
 """
-Taken from github.com/affinelayer/pix2pix-tensorflow/blob/master/tools/tfimage.py
+Adapted from github.com/affinelayer/pix2pix-tensorflow/blob/master/tools/tfimage.py
 """
 from __future__ import absolute_import
 from __future__ import division
@@ -7,6 +7,7 @@ from __future__ import print_function
 
 import tensorflow as tf
 import os
+
 
 def create_op(func, **placeholders):
     op = func(**placeholders)
@@ -19,6 +20,7 @@ def create_op(func, **placeholders):
         return tf.get_default_session().run(op, feed_dict=feed_dict)
 
     return f
+
 
 downscale = create_op(
     func=tf.image.resize_images,
@@ -95,6 +97,7 @@ to_float32 = create_op(
     dtype=tf.float32,
 )
 
+
 def load(path):
     with open(path, "rb") as f:
         contents = f.read()
@@ -110,6 +113,7 @@ def load(path):
 
     return to_float32(image=image)
 
+
 def find(d):
     result = []
     for filename in os.listdir(d):
@@ -118,6 +122,7 @@ def find(d):
             result.append(os.path.join(d, filename))
     result.sort()
     return result
+
 
 def save(image, path, replace=False):
     _, ext = os.path.splitext(path.lower())

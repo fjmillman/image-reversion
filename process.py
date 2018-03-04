@@ -5,27 +5,33 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import argparse
+from utils import check_folder
+
 import os
-import tensorflow as tf
+import time
+import argparse
 import numpy as np
 import tfimage as im
-import time
 
-parser = argparse.ArgumentParser()
-parser.add_argument("--input_dir", required=True, help="path to folder containing images")
-parser.add_argument("--output_dir", required=True, help="output path")
-parser.add_argument("--operation", required=True, choices=["resize", "combine"])
-parser.add_argument("--pad", action="store_true", help="pad instead of crop for resize operation")
-parser.add_argument("--size", type=int, default=256, help="size to use for resize operation")
-parser.add_argument("--b_dir", type=str, help="path to folder containing B images for combine operation")
-a = parser.parse_args()
 
-def resize(src):
+def parse_arguments():
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument("--input_dir", required=True, help="path to folder containing images")
+    parser.add_argument("--output_dir", required=True, help="output path")
+    parser.add_argument("--operation", required=True, choices=["resize", "combine"])
+    parser.add_argument("--pad", action="store_true", help="pad instead of crop for resize operation")
+    parser.add_argument("--size", type=int, default=256, help="size to use for resize operation")
+    parser.add_argument("--b_dir", type=str, help="path to folder containing B images for combine operation")
+
+    return parser.parse_args()
+
+
+def resize(src, pad, new_size):
     height, width, _ = src.shape
     dst = src
     if height != width:
-        if a.pad:
+        if pad:
             size = max(height, width)
             # Pad to correct ratio
             oh = (size - height) // 2
@@ -41,21 +47,22 @@ def resize(src):
     assert(dst.shape[0] == dst.shape[1])
 
     size, _, _ = dst.shape
-    if size > a.size:
-        dst = im.downscale(images=dst, size=[a.size, a.size])
-    elif size < a.size:
-        dst = im.upscale(images=dst, size=[a.size, a.size])
+    if size > new_size:
+        dst = im.downscale(images=dst, size=[new_size, new_size])
+    elif size < new_size:
+        dst = im.upscale(images=dst, size=[new_size, new_size])
 
     return dst
 
-def combine(src, src_path):
-    if a.b_dir is None:
+
+def combine(src, src_path, b_dir):
+    if b_dir is None:
         raise Exception("missing b_dir")
 
     # Find corresponding file in b_dir, could have a different extension
     basename, _ = os.path.splitext(os.path.basename(src_path))
     for ext in [".png", ".jpg"]:
-        sibling_path = os.path.join(a.b_dir, basename + ext)
+        sibling_path = os.path.join(b_dir, basename + ext)
         if os.path.exists(sibling_path):
             sibling = im.load(sibling_path)
             break
@@ -83,21 +90,24 @@ def combine(src, src_path):
 
     return np.concatenate([src, sibling], axis=1)
 
-def process(src_path, dst_path):
+
+def process(src_path, dst_path, operation, pad, size, b_dir):
     src = im.load(src_path)
 
-    if a.operation == "resize":
-        dst = resize(src)
-    elif a.operation == "combine":
-        dst = combine(src, src_path)
+    if operation == "resize":
+        dst = resize(src, pad, size)
+    elif operation == "combine":
+        dst = combine(src, src_path, b_dir)
     else:
         raise Exception("invalid operation")
 
     im.save(dst, dst_path)
 
+
 start = None
 num_complete = 0
 total = 0
+
 
 def complete():
     global num_complete, rate, last_complete
@@ -111,39 +121,44 @@ def complete():
     else:
         remaining = 0
 
-    print("%d/%d complete  %0.2f images/sec  %dm%ds elapsed  %dm%ds remaining" % (num_complete, total, rate, elapsed // 60, elapsed % 60, remaining // 60, remaining % 60))
+    print(f"Progress: {num_complete}/{total} complete - Rate: {rate:0.2f} images/sec - Time:"
+          f"{elapsed // 60}m{elapsed % 60}s elapsed and {remaining // 60}m{remaining % 60}s remaining")
 
     last_complete = now
 
+
 def main():
-    if not os.path.exists(a.output_dir):
-        os.makedirs(a.output_dir)
+    args = parse_arguments()
+
+    check_folder(args.output_dir)
 
     src_paths = []
     dst_paths = []
 
     skipped = 0
-    for src_path in im.find(a.input_dir):
+    for src_path in im.find(args.input_dir):
         name, _ = os.path.splitext(os.path.basename(src_path))
-        dst_path = os.path.join(a.output_dir, name + ".png")
+        dst_path = os.path.join(args.output_dir, name + ".png")
         if os.path.exists(dst_path):
             skipped += 1
         else:
             src_paths.append(src_path)
             dst_paths.append(dst_path)
 
-    print("skipping %d files that already exist" % skipped)
+    print(f"skipping {skipped} files that already exist")
 
     global total
     total = len(src_paths)
 
-    print("processing %d files" % total)
+    print(f"processing {total} files")
 
     global start
     start = time.time()
 
     for src_path, dst_path in zip(src_paths, dst_paths):
-        process(src_path, dst_path)
+        process(src_path, dst_path, args.operation, args.pad, args.size, args.b_dir)
         complete()
 
-main()
+
+if __name__ == '__main__':
+    main()
