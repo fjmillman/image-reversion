@@ -10,9 +10,9 @@ import tensorflow as tf
 
 flags = tf.flags
 
+flags.DEFINE_integer('scale_size', 286, 'The size for the images to be resized to.')
+flags.DEFINE_integer('crop_size', 256, 'The size for the images to be cropped to.')
 flags.DEFINE_integer('max_epochs', 200, 'The number of training epochs.')
-flags.DEFINE_integer('progress_freq', 50, 'The number of steps to take before displaying progress.')
-flags.DEFINE_integer('save_freq', 5000, 'The number of steps to take before saving the model.')
 flags.DEFINE_integer('batch_size', 10, 'The number of images in each batch.')
 flags.DEFINE_integer('ngf', 64, 'The number of generator filters in the first convolution layer.')
 flags.DEFINE_integer('ndf', 64, 'The number of discriminator filters in the first convolution layer.')
@@ -20,6 +20,8 @@ flags.DEFINE_float('lr', 0.0002, 'The initial learning rate for ADAM.')
 flags.DEFINE_float('beta1', 0.5, 'The momentum term of ADAM.')
 flags.DEFINE_float('l1_weight', 100.0, 'The weight on the L1 term for the generator gradient.')
 flags.DEFINE_float('gan_weight', 1.0, 'The weight on the GAN term for the generator gradient.')
+flags.DEFINE_integer('progress_freq', 50, 'The number of steps to take before displaying progress.')
+flags.DEFINE_integer('save_freq', 5000, 'The number of steps to take before saving the model.')
 
 FLAGS = flags.FLAGS
 
@@ -50,8 +52,8 @@ def main():
         raise Exception("Checkpoint is required for test mode")
 
     # Initialise the GAN before running
-    model = GAN(args.input_dir, args.output_dir, args.checkpoint, FLAGS.batch_size, FLAGS.ngf,
-                FLAGS.ndf, FLAGS.lr, FLAGS.beta1, FLAGS.l1_weight, FLAGS.gan_weight)
+    model = GAN(args.input_dir, args.output_dir, args.checkpoint, FLAGS.scale_size, FLAGS.crop_size, FLAGS.batch_size,
+                FLAGS.ngf, FLAGS.ndf, FLAGS.lr, FLAGS.beta1, FLAGS.l1_weight, FLAGS.gan_weight)
 
     # Train or test the initialised GAN based on the chosen mode
     if args.mode == "train":

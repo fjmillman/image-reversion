@@ -5,6 +5,7 @@ from __future__ import print_function
 import os
 import glob
 import math
+import random
 import tensorflow as tf
 
 
@@ -16,19 +17,29 @@ def check_folder(path_dir):
         os.makedirs(path_dir)
 
 
+def transform(image, seed, scale_size, crop_size):
+    """
+    Process image to be inputted to model
+    """
+    image = tf.image.resize_images(image, [scale_size, scale_size], method=tf.image.ResizeMethod.AREA)
+    offset = tf.cast(tf.floor(tf.random_uniform([2], 0, scale_size - crop_size + 1, seed=seed)), dtype=tf.int32)
+
+    return tf.image.crop_to_bounding_box(image, offset[0], offset[1], crop_size, crop_size)
+
+
+def pre_process(image, seed, scale_size, crop_size):
+    """
+    Scale pixels of a given image to [-1, 1]
+    """
+    # [0, 1] => [-1, 1]
+    return transform((image * 2) - 1, seed, scale_size, crop_size)
+
+
 def convert(image):
     """
     Convert image type
     """
     return tf.image.convert_image_dtype(image, dtype=tf.uint8, saturate=True)
-
-
-def pre_process(image):
-    """
-    Scale pixels of a given image to [-1, 1]
-    """
-    # [0, 1] => [-1, 1]
-    return (image * 2) - 1
 
 
 def de_process(image):
@@ -39,7 +50,7 @@ def de_process(image):
     return convert((image + 1) / 2)
 
 
-def load_images(input_dir, batch_size):
+def load_images(input_dir, batch_size, scale_size, crop_size):
     """
     Load images from the given input directory
     """
@@ -58,8 +69,9 @@ def load_images(input_dir, batch_size):
     width = tf.shape(raw_image)[1]
     left, right = raw_image[:, :width // 2, :], raw_image[:, width // 2:, :]
 
-    left = pre_process(left)
-    right = pre_process(right)
+    seed = random.randint(0, 2 ** 31 - 1)
+    left = pre_process(left, seed, scale_size, crop_size)
+    right = pre_process(right, seed, scale_size, crop_size)
 
     inputs, targets = right, left
 
