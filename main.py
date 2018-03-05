@@ -10,8 +10,6 @@ import tensorflow as tf
 
 flags = tf.flags
 
-flags.DEFINE_integer('scale_size', 286, 'The size for the images to be resized to.')
-flags.DEFINE_integer('crop_size', 256, 'The size for the images to be cropped to.')
 flags.DEFINE_integer('max_epochs', 200, 'The number of training epochs.')
 flags.DEFINE_integer('batch_size', 10, 'The number of images in each batch.')
 flags.DEFINE_integer('ngf', 64, 'The number of generator filters in the first convolution layer.')
@@ -52,8 +50,8 @@ def main():
         raise Exception("Checkpoint is required for test mode")
 
     # Initialise the GAN before running
-    model = GAN(args.input_dir, args.output_dir, args.checkpoint, FLAGS.scale_size, FLAGS.crop_size, FLAGS.batch_size,
-                FLAGS.ngf, FLAGS.ndf, FLAGS.lr, FLAGS.beta1, FLAGS.l1_weight, FLAGS.gan_weight)
+    model = GAN(args.input_dir, args.output_dir, args.checkpoint, FLAGS.batch_size, FLAGS.ngf, FLAGS.ndf, FLAGS.lr,
+                FLAGS.beta1, FLAGS.l1_weight, FLAGS.gan_weight)
 
     # Train or test the initialised GAN based on the chosen mode
     if args.mode == "train":

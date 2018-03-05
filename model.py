@@ -12,15 +12,13 @@ EPS = 1e-12
 
 
 class GAN(object):
-    def __init__(self, input_dir, output_dir, checkpoint, scale_size, crop_size, batch_size, ngf, ndf, lr, beta1,
+    def __init__(self, input_dir, output_dir, checkpoint, batch_size, ngf, ndf, lr, beta1,
                  l1_weight, gan_weight):
         """
         Args:
             input_dir
             output_dir
             checkpoint
-            scale_size
-            crop_size
             batch_size
             ngf
             ndf
@@ -32,8 +30,6 @@ class GAN(object):
         self.input_dir = input_dir
         self.output_dir = output_dir
         self.checkpoint = checkpoint
-        self.scale_size = scale_size
-        self.crop_size = crop_size
         self.batch_size = batch_size
         self.ngf = ngf
         self.ndf = ndf
@@ -43,7 +39,7 @@ class GAN(object):
         self.gan_weight = gan_weight
 
         # Load the images from the input directory
-        paths, inputs, targets, steps_per_epoch = load_images(self.input_dir, self.scale_size, self.crop_size, self.batch_size)
+        paths, inputs, targets, steps_per_epoch = load_images(self.input_dir, self.batch_size)
 
         self.paths = paths
         self.inputs = inputs
