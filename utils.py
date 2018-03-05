@@ -5,7 +5,6 @@ from __future__ import print_function
 import os
 import glob
 import math
-import random
 import tensorflow as tf
 
 
@@ -15,16 +14,6 @@ def check_folder(path_dir):
     """
     if not os.path.isdir(path_dir):
         os.makedirs(path_dir)
-
-
-def transform(image, seed, scale_size, crop_size):
-    """
-    Process image to be inputted to model
-    """
-    image = tf.image.resize_images(image, [scale_size, scale_size], method=tf.image.ResizeMethod.AREA)
-    offset = tf.cast(tf.floor(tf.random_uniform([2], 0, scale_size - crop_size + 1, seed=seed)), dtype=tf.int32)
-
-    return tf.image.crop_to_bounding_box(image, offset[0], offset[1], crop_size, crop_size)
 
 
 def convert(image):
@@ -50,7 +39,7 @@ def de_process(image):
     return (image + 1) / 2
 
 
-def load_images(input_dir, batch_size, scale_size, crop_size):
+def load_images(input_dir, batch_size):
     """
     Load images from the given input directory
     """
@@ -67,7 +56,7 @@ def load_images(input_dir, batch_size, scale_size, crop_size):
     paths, contents = reader.read(path_queue)
     raw_image = tf.image.decode_png(contents)
     raw_image = tf.image.convert_image_dtype(raw_image, dtype=tf.float32)
-    raw_image.set_shape([None, None, 3])
+    raw_image.set_shape([256, 512, 3])
 
     width = tf.shape(raw_image)[1]
     left = pre_process(raw_image[:, :width // 2, :])
