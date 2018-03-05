@@ -68,41 +68,52 @@ class GAN(object):
             out_channels = int(targets.get_shape()[-1])
             outputs = self.generator(inputs, out_channels)
 
-        with tf.variable_scope("discriminator"):
-            predict_real = self.discriminator(inputs, targets)
+        # create two copies of discriminator, one for real pairs and one for fake pairs
+        # they share the same underlying variables
+        with tf.name_scope("real_discriminator"):
+            with tf.variable_scope("discriminator"):
+                # 2x [batch, height, width, channels] => [batch, 30, 30, 1]
+                predict_real = self.discriminator(inputs, targets)
 
-        with tf.variable_scope("discriminator", reuse=True):
-            predict_fake = self.discriminator(inputs, outputs)
+        with tf.name_scope("fake_discriminator"):
+            with tf.variable_scope("discriminator", reuse=True):
+                # 2x [batch, height, width, channels] => [batch, 30, 30, 1]
+                predict_fake = self.discriminator(inputs, outputs)
 
-        # Discriminator loss
-        discrim_loss = tf.reduce_mean(-(tf.log(predict_real + EPS) + tf.log(1 - predict_fake + EPS)))
+        with tf.name_scope("discriminator_loss"):
+            # minimizing -tf.log will try to get inputs to 1
+            # predict_real => 1
+            # predict_fake => 0
+            discrim_loss = tf.reduce_mean(-(tf.log(predict_real + EPS) + tf.log(1 - predict_fake + EPS)))
 
-        # Generator loss
-        gen_loss_gan = tf.reduce_mean(-tf.log(predict_fake + EPS))
-        gen_loss_l1 = tf.reduce_mean(tf.abs(targets - outputs))
-        gen_loss = gen_loss_gan * self.gan_weight + gen_loss_l1 * self.l1_weight
+        with tf.name_scope("generator_loss"):
+            # predict_fake => 1
+            # abs(targets - outputs) => 0
+            gen_loss_GAN = tf.reduce_mean(-tf.log(predict_fake + EPS))
+            gen_loss_L1 = tf.reduce_mean(tf.abs(targets - outputs))
+            gen_loss = gen_loss_GAN * self.gan_weight + gen_loss_L1 * self.l1_weight
 
-        # Discriminator train op
-        discrim_tvars = [var for var in tf.trainable_variables() if var.name.startswith("discriminator")]
-        discrim_optim = tf.train.AdamOptimizer(self.lr, self.beta1)
-        discrim_grads_and_vars = discrim_optim.compute_gradients(discrim_loss, var_list=discrim_tvars)
-        discrim_train = discrim_optim.apply_gradients(discrim_grads_and_vars)
+        with tf.name_scope("discriminator_train"):
+            discrim_tvars = [var for var in tf.trainable_variables() if var.name.startswith("discriminator")]
+            discrim_optim = tf.train.AdamOptimizer(self.lr, self.beta1)
+            discrim_grads_and_vars = discrim_optim.compute_gradients(discrim_loss, var_list=discrim_tvars)
+            discrim_train = discrim_optim.apply_gradients(discrim_grads_and_vars)
 
-        # Generator train op
-        with tf.control_dependencies([discrim_train]):
-            gen_tvars = [var for var in tf.trainable_variables() if var.name.startswith("generator")]
-            gen_optim = tf.train.AdamOptimizer(self.lr, self.beta1)
-            gen_grads_and_vars = gen_optim.compute_gradients(gen_loss, var_list=gen_tvars)
-            gen_train = gen_optim.apply_gradients(gen_grads_and_vars)
+        with tf.name_scope("generator_train"):
+            with tf.control_dependencies([discrim_train]):
+                gen_tvars = [var for var in tf.trainable_variables() if var.name.startswith("generator")]
+                gen_optim = tf.train.AdamOptimizer(self.lr, self.beta1)
+                gen_grads_and_vars = gen_optim.compute_gradients(gen_loss, var_list=gen_tvars)
+                gen_train = gen_optim.apply_gradients(gen_grads_and_vars)
 
-        # Decay gradient over time
         ema = tf.train.ExponentialMovingAverage(decay=0.99)
-        update_losses = ema.apply([discrim_loss, gen_loss_gan, gen_loss_l1])
+        update_losses = ema.apply([discrim_loss, gen_loss_GAN, gen_loss_L1])
 
-        # Incrementing global step
-        global_step = tf.contrib.framework.get_or_create_global_step()
+        global_step = tf.train.get_or_create_global_step()
         incr_global_step = tf.assign(global_step, global_step + 1)
 
+        gen_loss = ema.average(gen_loss)
+        discrim_loss = ema.average(discrim_loss)
         train_op = tf.group(update_losses, incr_global_step, gen_train)
 
         return outputs, train_op, gen_loss, discrim_loss
@@ -246,8 +257,8 @@ class GAN(object):
                     remaining = (max_steps - step) * self.batch_size / rate
                     print(f"Progress | Epoch: {train_epoch} - Step: {train_step} - Image/sec: {rate} - Remaining time: "
                           f"{int(remaining / 60)}m")
-                    print("discrim_loss", results["discrim_loss"])
-                    print("gen_loss_GAN", results["gen_loss"])
+                    print(f"Discriminator loss: {results['discrim_loss']}")
+                    print(f"Generator loss: {results['gen_loss']}")
 
                 if should(save_freq):
                     print("Saving model")
