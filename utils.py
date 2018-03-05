@@ -46,7 +46,7 @@ def load_images(input_dir, batch_size):
     if input_dir is None or not os.path.exists(input_dir):
         raise Exception("input_dir does not exist")
 
-    input_paths = glob.glob(os.path.join(input_dir, "*.jpg"))
+    input_paths = glob.glob(os.path.join(input_dir, "*.png"))
 
     path_queue = tf.train.string_input_producer(input_paths, shuffle=True)
     reader = tf.WholeFileReader()
