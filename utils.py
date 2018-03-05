@@ -27,14 +27,6 @@ def transform(image, seed, scale_size, crop_size):
     return tf.image.crop_to_bounding_box(image, offset[0], offset[1], crop_size, crop_size)
 
 
-def pre_process(image, seed, scale_size, crop_size):
-    """
-    Scale pixels of a given image to [-1, 1]
-    """
-    # [0, 1] => [-1, 1]
-    return transform((image * 2) - 1, seed, scale_size, crop_size)
-
-
 def convert(image):
     """
     Convert image type
@@ -42,12 +34,20 @@ def convert(image):
     return tf.image.convert_image_dtype(image, dtype=tf.uint8, saturate=True)
 
 
+def pre_process(image):
+    """
+    Scale pixels of a given image to [-1, 1]
+    """
+    # [0, 1] => [-1, 1]
+    return (image * 2) - 1
+
+
 def de_process(image):
     """
     Scale pixels of a given image to [0, 1]
     """
     # [-1, 1] => [0, 1]
-    return convert((image + 1) / 2)
+    return (image + 1) / 2
 
 
 def load_images(input_dir, batch_size, scale_size, crop_size):
@@ -59,19 +59,28 @@ def load_images(input_dir, batch_size, scale_size, crop_size):
 
     input_paths = glob.glob(os.path.join(input_dir, "*.png"))
 
+    if len(input_paths) == 0:
+        raise Exception("input_dir contains no image files")
+
     path_queue = tf.train.string_input_producer(input_paths, shuffle=True)
     reader = tf.WholeFileReader()
     paths, contents = reader.read(path_queue)
     raw_image = tf.image.decode_png(contents)
     raw_image = tf.image.convert_image_dtype(raw_image, dtype=tf.float32)
-    raw_image.set_shape([None, None, 3])
+
+    assertion = tf.assert_equal(tf.shape(raw_image)[2], 3, message="image does not have 3 channels")
+    with tf.control_dependencies([assertion]):
+        raw_input = tf.identity(raw_image)
+
+    raw_input.set_shape([None, None, 3])
 
     width = tf.shape(raw_image)[1]
-    left, right = raw_image[:, :width // 2, :], raw_image[:, width // 2:, :]
+    left = pre_process(raw_image[:, :width // 2, :])
+    right = pre_process(raw_image[:, width // 2:, :])
 
     seed = random.randint(0, 2 ** 31 - 1)
-    left = pre_process(left, seed, scale_size, crop_size)
-    right = pre_process(right, seed, scale_size, crop_size)
+    left = transform(left, seed, scale_size, crop_size)
+    right = transform(right, seed, scale_size, crop_size)
 
     inputs, targets = right, left
 

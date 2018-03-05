@@ -115,7 +115,7 @@ class GAN(object):
 
         # encoder_1: [batch, 256, 256, in_channels] => [batch, 128, 128, ngf]
         with tf.variable_scope("encoder_1"):
-            output = conv(generator_inputs, self.ngf, stride=2)
+            output = gen_conv(generator_inputs, self.ngf)
             layers.append(output)
 
         layer_specs = [
@@ -132,7 +132,7 @@ class GAN(object):
             with tf.variable_scope("encoder_{}".format(len(layers) + 1)):
                 rectified = lrelu(layers[-1], 0.2)
                 # [batch, in_height, in_width, in_channels] => [batch, in_height / 2, in_width / 2, out_channels]
-                convolved = conv(rectified, out_channels, stride=2)
+                convolved = gen_conv(rectified, out_channels)
                 output = batchnorm(convolved)
                 layers.append(output)
 
@@ -159,7 +159,7 @@ class GAN(object):
 
                 rectified = tf.nn.relu(input)
                 # [batch, in_height, in_width, in_channels] => [batch, in_height * 2, in_width * 2, out_channels]
-                output = deconv(rectified, out_channels)
+                output = gen_deconv(rectified, out_channels)
                 output = batchnorm(output)
 
                 if dropout > 0.0:
@@ -171,7 +171,7 @@ class GAN(object):
         with tf.variable_scope("decoder_1"):
             input = tf.concat([layers[-1], layers[0]], axis=3)
             rectified = tf.nn.relu(input)
-            output = deconv(rectified, generator_outputs_channels)
+            output = gen_deconv(rectified, generator_outputs_channels)
             output = tf.tanh(output)
             layers.append(output)
 
@@ -189,7 +189,7 @@ class GAN(object):
 
         # layer_1: [batch, 256, 256, in_channels * 2] => [batch, 128, 128, ndf]
         with tf.variable_scope("layer_1"):
-            convolved = conv(input, self.ndf, stride=2)
+            convolved = discrim_conv(input, self.ndf, stride=2)
             rectified = lrelu(convolved, 0.2)
             layers.append(rectified)
 
@@ -200,14 +200,14 @@ class GAN(object):
             with tf.variable_scope("layer_%d" % (len(layers) + 1)):
                 out_channels = self.ndf * min(2 ** (i + 1), 8)
                 stride = 1 if i == n_layers - 1 else 2  # last layer here has stride 1
-                convolved = conv(layers[-1], out_channels, stride=stride)
+                convolved = discrim_conv(layers[-1], out_channels, stride=stride)
                 normalized = batchnorm(convolved)
                 rectified = lrelu(normalized, 0.2)
                 layers.append(rectified)
 
         # layer_5: [batch, 31, 31, ndf * 8] => [batch, 30, 30, 1]
         with tf.variable_scope("layer_%d" % (len(layers) + 1)):
-            convolved = conv(rectified, out_channels=1, stride=1)
+            convolved = discrim_conv(rectified, out_channels=1, stride=1)
             output = tf.sigmoid(convolved)
             layers.append(output)
 
@@ -262,9 +262,9 @@ class GAN(object):
         """
         output_images = {
             "paths": self.paths,
-            "inputs": tf.map_fn(tf.image.encode_png, de_process(self.inputs), dtype=tf.string, name="inputs_pngs"),
-            "targets": tf.map_fn(tf.image.encode_png, de_process(self.targets), dtype=tf.string, name="target_pngs"),
-            "outputs": tf.map_fn(tf.image.encode_png, de_process(self.outputs), dtype=tf.string, name="output_pngs"),
+            "inputs": tf.map_fn(tf.image.encode_png, convert(de_process(self.inputs)), dtype=tf.string, name="inputs_pngs"),
+            "targets": tf.map_fn(tf.image.encode_png, convert(de_process(self.targets)), dtype=tf.string, name="target_pngs"),
+            "outputs": tf.map_fn(tf.image.encode_png, convert(de_process(self.outputs)), dtype=tf.string, name="output_pngs"),
         }
 
         print(f"Number of images: {len(output_images)}")
