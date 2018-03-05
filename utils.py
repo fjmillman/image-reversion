@@ -56,11 +56,14 @@ def load_images(input_dir, batch_size):
     paths, contents = reader.read(path_queue)
     raw_image = tf.image.decode_png(contents)
     raw_image = tf.image.convert_image_dtype(raw_image, dtype=tf.float32)
-    raw_image.set_shape([256, 512, 3])
+    raw_image.set_shape([None, None, 3])
 
     width = tf.shape(raw_image)[1]
     left = pre_process(raw_image[:, :width // 2, :])
     right = pre_process(raw_image[:, width // 2:, :])
+
+    left.set_shape([256, 256, 3])
+    right.set_shape([256, 256, 3])
 
     inputs, targets = right, left
 
