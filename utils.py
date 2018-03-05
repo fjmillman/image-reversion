@@ -16,6 +16,13 @@ def check_folder(path_dir):
         os.makedirs(path_dir)
 
 
+def transform(image):
+    """
+    Resize image to 256 pixels height and width
+    """
+    return tf.image.resize_images(image, [256, 256], method=tf.image.ResizeMethod.AREA)
+
+
 def convert(image):
     """
     Convert image type
@@ -59,13 +66,9 @@ def load_images(input_dir, batch_size):
     raw_image.set_shape([None, None, 3])
 
     width = tf.shape(raw_image)[1]
-    left = pre_process(raw_image[:, :width // 2, :])
-    right = pre_process(raw_image[:, width // 2:, :])
+    left, right = pre_process(raw_image[:, :width // 2, :]), pre_process(raw_image[:, width // 2:, :])
 
-    left.set_shape([256, 256, 3])
-    right.set_shape([256, 256, 3])
-
-    inputs, targets = right, left
+    inputs, targets = transform(left), transform(right)
 
     paths, inputs, targets = tf.train.batch([paths, inputs, targets], batch_size=batch_size)
     steps_per_epoch = int(math.ceil(len(input_paths) / batch_size))
