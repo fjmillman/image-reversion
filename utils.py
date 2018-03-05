@@ -67,12 +67,7 @@ def load_images(input_dir, batch_size, scale_size, crop_size):
     paths, contents = reader.read(path_queue)
     raw_image = tf.image.decode_png(contents)
     raw_image = tf.image.convert_image_dtype(raw_image, dtype=tf.float32)
-
-    assertion = tf.assert_equal(tf.shape(raw_image)[2], 3, message="image does not have 3 channels")
-    with tf.control_dependencies([assertion]):
-        raw_input = tf.identity(raw_image)
-
-    raw_input.set_shape([None, None, 3])
+    raw_image.set_shape([None, None, 3])
 
     width = tf.shape(raw_image)[1]
     left = pre_process(raw_image[:, :width // 2, :])
