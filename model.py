@@ -277,8 +277,8 @@ class GAN(object):
                 results = sess.run(output_images)
                 filesets = save_images(results, self.output_dir)
                 for fileset in filesets:
-                    print("Evaluated image", fileset["name"])
+                    print(f"Evaluated image {fileset['name']}")
                 index_path = append_index(filesets, self.output_dir)
 
-            print("Wrote index at ", index_path)
-            print("Rate:", (time.time() - start) / self.steps_per_epoch)
+            print(f"Wrote index at {index_path}")
+            print(f"Rate: {(time.time() - start) / self.steps_per_epoch}")

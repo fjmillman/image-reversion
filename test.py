@@ -2,7 +2,8 @@ from __future__ import division
 from skimage import io
 from skimage.measure import compare_mse as mse, compare_ssim as ssim
 
-import os, glob
+import os
+import glob
 import argparse
 
 

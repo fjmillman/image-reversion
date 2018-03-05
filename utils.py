@@ -107,7 +107,7 @@ def append_index(filesets, output_dir):
         index.write(f"<tr><td>{fileset['name']}</td>")
 
         for kind in ["inputs", "outputs", "targets"]:
-            index.write(f"<td><img src='images/{fileset[kind])}'></td>")
+            index.write(f"<td><img src='images/{fileset[kind]}'></td>")
 
         index.write("</tr>")
 
