@@ -51,7 +51,7 @@ def load_images(input_dir, batch_size):
     path_queue = tf.train.string_input_producer(input_paths, shuffle=True)
     reader = tf.WholeFileReader()
     paths, contents = reader.read(path_queue)
-    raw_image = tf.image.decode_jpeg(contents)
+    raw_image = tf.image.decode_png(contents)
     raw_image = tf.image.convert_image_dtype(raw_image, dtype=tf.float32)
     raw_image.set_shape([None, None, 3])
 
