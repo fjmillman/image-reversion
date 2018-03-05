@@ -73,10 +73,6 @@ def load_images(input_dir, batch_size, scale_size, crop_size):
     left = pre_process(raw_image[:, :width // 2, :])
     right = pre_process(raw_image[:, width // 2:, :])
 
-    seed = random.randint(0, 2 ** 31 - 1)
-    left = transform(left, seed, scale_size, crop_size)
-    right = transform(right, seed, scale_size, crop_size)
-
     inputs, targets = right, left
 
     paths, inputs, targets = tf.train.batch([paths, inputs, targets], batch_size=batch_size)
