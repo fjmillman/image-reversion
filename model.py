@@ -12,12 +12,10 @@ EPS = 1e-12
 
 
 class GAN(object):
-    def __init__(self, sv, sess, input_dir, output_dir, checkpoint, paths, inputs, targets, batch_size, steps_per_epoch,
+    def __init__(self, input_dir, output_dir, checkpoint, paths, inputs, targets, batch_size, steps_per_epoch,
                  ngf, ndf, lr, beta1, l1_weight, gan_weight):
         """
         Args:
-            sv
-            sess
             input_dir
             output_dir
             checkpoint
@@ -33,8 +31,6 @@ class GAN(object):
             l1_weight
             gan_weight
         """
-        self.sv = sv
-        self.sess = sess
         self.input_dir = input_dir
         self.output_dir = output_dir
         self.checkpoint = checkpoint
@@ -219,7 +215,7 @@ class GAN(object):
 
         return layers[-1]
 
-    def train(self, max_epochs, progress_freq, save_freq):
+    def train(self, sv, sess, max_epochs, progress_freq, save_freq):
         """
         Train the GAN
         """
@@ -233,14 +229,14 @@ class GAN(object):
 
             fetches = {
                 "train": self.train_op,
-                "global_step": self.sv.global_step,
+                "global_step": sv.global_step,
             }
 
             if should(progress_freq):
                 fetches["discrim_loss"] = self.discrim_loss
                 fetches["gen_loss"] = self.gen_loss
 
-            results = self.sess.run(fetches)
+            results = sess.run(fetches)
 
             if should(progress_freq):
                 train_epoch = math.ceil(results["global_step"] / self.steps_per_epoch)
@@ -254,12 +250,12 @@ class GAN(object):
 
             if should(save_freq):
                 print("Saving model")
-                self.saver.save(self.sess, os.path.join(self.output_dir, "model"), global_step=self.sv.global_step)
+                self.saver.save(sess, os.path.join(self.output_dir, "model"), global_step=sv.global_step)
 
-            if self.sv.should_stop():
+            if sv.should_stop():
                 break
 
-    def test(self):
+    def test(self, sess):
         """
         Test the GAN
         """
@@ -276,11 +272,11 @@ class GAN(object):
 
         # Restore from checkpoint
         checkpoint = tf.train.latest_checkpoint(self.output_dir)
-        self.saver.restore(self.sess, checkpoint)
+        self.saver.restore(sess, checkpoint)
 
         # Save outputs
         for step in range(self.steps_per_epoch):
-            results = self.sess.run(output_images)
+            results = sess.run(output_images)
             filesets = save_images(results, self.output_dir)
             for fileset in filesets:
                 print(f"Evaluated image {fileset['name']}")
