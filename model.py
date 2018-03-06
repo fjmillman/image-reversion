@@ -51,6 +51,12 @@ class GAN(object):
 
         self.saver = tf.train.Saver(max_to_keep=1)
 
+    def get_outputs(self):
+        """
+        Get the outputs
+        """
+        return self.outputs
+
     def build_model(self, inputs, targets):
         """
         Build the model
@@ -244,7 +250,7 @@ class GAN(object):
                 train_step = (results["global_step"] - 1) % self.steps_per_epoch + 1
                 rate = (step + 1) * self.batch_size / (time.time() - start)
                 remaining = (max_steps - step) * self.batch_size / rate
-                print(f"Progress | Epoch: {train_epoch} - Step: {train_step} - Image/sec: {rate} - Remaining time: "
+                print(f"Progress | Epoch: {train_epoch} - Step: {train_step} - Image rate: {rate:.2f} - Remaining time: "
                       f"{int(remaining / 60)}m")
                 print(f"Discriminator loss: {results['discrim_loss']}")
                 print(f"Generator loss GAN: {results['gen_loss_GAN']}")
@@ -257,19 +263,10 @@ class GAN(object):
             if sv.should_stop():
                 break
 
-    def test(self, sess):
+    def test(self, sess, display_images):
         """
         Test the GAN
         """
-        output_images = {
-            "paths": self.paths,
-            "inputs": tf.map_fn(tf.image.encode_png, convert(de_process(self.inputs)), dtype=tf.string, name="inputs_pngs"),
-            "targets": tf.map_fn(tf.image.encode_png, convert(de_process(self.targets)), dtype=tf.string, name="target_pngs"),
-            "outputs": tf.map_fn(tf.image.encode_png, convert(de_process(self.outputs)), dtype=tf.string, name="output_pngs"),
-        }
-
-        print(f"Number of images: {len(output_images)}")
-
         start = time.time()
 
         # Restore from checkpoint
@@ -278,7 +275,7 @@ class GAN(object):
 
         # Save outputs
         for step in range(self.steps_per_epoch):
-            results = sess.run(output_images)
+            results = sess.run(display_images)
             filesets = save_images(results, self.output_dir)
             for fileset in filesets:
                 print(f"Evaluated image {fileset['name']}")
