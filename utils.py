@@ -34,16 +34,18 @@ def pre_process(image):
     """
     Scale pixels of a given image to [-1, 1]
     """
-    # [0, 1] => [-1, 1]
-    return (image * 2) - 1
+    with tf.name_scope("pre-process"):
+        # [0, 1] => [-1, 1]
+        return (image * 2) - 1
 
 
 def de_process(image):
     """
     Scale pixels of a given image to [0, 1]
     """
-    # [-1, 1] => [0, 1]
-    return (image + 1) / 2
+    with tf.name_scope("de-process"):
+        # [-1, 1] => [0, 1]
+        return (image + 1) / 2
 
 
 def load_images(input_dir, batch_size):
@@ -58,22 +60,33 @@ def load_images(input_dir, batch_size):
     if len(input_paths) == 0:
         raise Exception("input_dir contains no image files")
 
-    path_queue = tf.train.string_input_producer(input_paths, shuffle=True)
-    reader = tf.WholeFileReader()
-    paths, contents = reader.read(path_queue)
-    raw_image = tf.image.decode_png(contents)
-    raw_image = tf.image.convert_image_dtype(raw_image, dtype=tf.float32)
-    raw_image.set_shape([None, None, 3])
+    with tf.name_scope("load_images"):
+        path_queue = tf.train.string_input_producer(input_paths, shuffle=True)
+        reader = tf.WholeFileReader()
+        paths, contents = reader.read(path_queue)
+        raw_image = tf.image.decode_png(contents)
+        raw_image = tf.image.convert_image_dtype(raw_image, dtype=tf.float32)
 
-    width = tf.shape(raw_image)[1]
-    left, right = pre_process(raw_image[:, :width // 2, :]), pre_process(raw_image[:, width // 2:, :])
+        assertion = tf.assert_equal(tf.shape(raw_image)[2], 3, message="image does not have 3 channels")
+        with tf.control_dependencies([assertion]):
+            raw_image = tf.identity(raw_image)
 
-    inputs, targets = transform(left), transform(right)
+        raw_image.set_shape([None, None, 3])
 
-    paths, inputs, targets = tf.train.batch([paths, inputs, targets], batch_size=batch_size)
+        width = tf.shape(raw_image)[1]
+        inputs = pre_process(raw_image[:, :width // 2, :])
+        outputs = pre_process(raw_image[:, width // 2:, :])
+
+    with tf.name_scope("input_images"):
+        input_images = transform(inputs)
+
+    with tf.name_scope("target_images"):
+        target_images = transform(outputs)
+
+    paths_batch, inputs_batch, targets_batch = tf.train.batch([paths, input_images, target_images], batch_size=batch_size)
     steps_per_epoch = int(math.ceil(len(input_paths) / batch_size))
 
-    return paths, inputs, targets, steps_per_epoch
+    return paths_batch, inputs_batch, targets_batch, steps_per_epoch
 
 
 def save_images(results, output_dir):

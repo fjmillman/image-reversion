@@ -10,17 +10,19 @@ import tensorflow as tf
 
 flags = tf.flags
 
+flags.DEFINE_integer('batch_size', 1, 'The number of images in each batch.')
 flags.DEFINE_integer('max_epochs', 200, 'The number of training epochs.')
-flags.DEFINE_integer('batch_size', 10, 'The number of images in each batch.')
+
 flags.DEFINE_integer('ngf', 64, 'The number of generator filters in the first convolution layer.')
 flags.DEFINE_integer('ndf', 64, 'The number of discriminator filters in the first convolution layer.')
+
 flags.DEFINE_float('lr', 0.0002, 'The initial learning rate for ADAM.')
 flags.DEFINE_float('beta1', 0.5, 'The momentum term of ADAM.')
 flags.DEFINE_float('l1_weight', 100.0, 'The weight on the L1 term for the generator gradient.')
 flags.DEFINE_float('gan_weight', 1.0, 'The weight on the GAN term for the generator gradient.')
+
 flags.DEFINE_integer('progress_freq', 50, 'The number of steps to take before displaying progress.')
 flags.DEFINE_integer('save_freq', 5000, 'The number of steps to take before saving the model.')
-flags.DEFINE_integer('summary_freq', 100, 'The number of steps to take updating summaries.')
 
 FLAGS = flags.FLAGS
 
@@ -57,11 +59,11 @@ def main():
     model = GAN(args.input_dir, args.output_dir, args.checkpoint, paths, inputs, targets, FLAGS.batch_size,
                 steps_per_epoch, FLAGS.ngf, FLAGS.ndf, FLAGS.lr, FLAGS.beta1, FLAGS.l1_weight, FLAGS.gan_weight)
 
-    sv = tf.train.Supervisor(logdir=args.output_dir, save_summaries_secs=0, saver=None)
+    sv = tf.train.Supervisor(logdir=None, save_summaries_secs=0, saver=None)
     with sv.managed_session() as sess:
         # Train or test the initialised GAN based on the chosen mode
         if args.mode == "train":
-            model.train(sv, sess, FLAGS.max_epochs, FLAGS.progress_freq, FLAGS.save_freq, FLAGS.summary_freq)
+            model.train(sv, sess, FLAGS.max_epochs, FLAGS.progress_freq, FLAGS.save_freq)
         else:
             model.test(sess)
 

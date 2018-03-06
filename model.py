@@ -47,35 +47,7 @@ class GAN(object):
         self.gan_weight = gan_weight
 
         # Build the model
-        self.outputs, self.train_op, self.gen_loss_GAN, self.gen_loss_L1, self.discrim_loss, self.predict_real, self.predict_fake, self.discrim_grads_and_vars, self.gen_grads_and_vars = self.build_model(self.inputs, self.targets)
-
-        with tf.name_scope("inputs_summary"):
-            tf.summary.image("inputs", self.inputs)
-
-        with tf.name_scope("targets_summary"):
-            tf.summary.image("targets", self.targets)
-
-        with tf.name_scope("outputs_summary"):
-            tf.summary.image("outputs", self.outputs)
-
-        with tf.name_scope("predict_real_summary"):
-            tf.summary.image("predict_real", tf.image.convert_image_dtype(self.predict_real, dtype=tf.uint8))
-
-        with tf.name_scope("predict_fake_summary"):
-            tf.summary.image("predict_fake", tf.image.convert_image_dtype(self.predict_fake, dtype=tf.uint8))
-
-        tf.summary.scalar("discriminator_loss", self.discrim_loss)
-        tf.summary.scalar("generator_loss_GAN", self.gen_loss_GAN)
-        tf.summary.scalar("generator_loss_L1", self.gen_loss_L1)
-
-        for var in tf.trainable_variables():
-            tf.summary.histogram(var.op.name + "/values", var)
-
-        for grad, var in self.discrim_grads_and_vars + self.gen_grads_and_vars:
-            tf.summary.histogram(var.op.name + "/gradients", grad)
-
-        with tf.name_scope("parameter_count"):
-            self.parameter_count = tf.reduce_sum([tf.reduce_prod(tf.shape(v)) for v in tf.trainable_variables()])
+        self.outputs, self.train_op, self.gen_loss_GAN, self.gen_loss_L1, self.discrim_loss = self.build_model(self.inputs, self.targets)
 
         self.saver = tf.train.Saver(max_to_keep=1)
 
@@ -136,7 +108,7 @@ class GAN(object):
         discrim_loss = ema.average(discrim_loss)
         train_op = tf.group(update_losses, incr_global_step, gen_train)
 
-        return outputs, train_op, gen_loss_GAN, gen_loss_L1, discrim_loss, predict_real, predict_fake, discrim_grads_and_vars, gen_grads_and_vars
+        return outputs, train_op, gen_loss_GAN, gen_loss_L1, discrim_loss
 
     def generator(self, generator_inputs, generator_outputs_channels):
         """
@@ -244,12 +216,10 @@ class GAN(object):
 
         return layers[-1]
 
-    def train(self, sv, sess, max_epochs, progress_freq, save_freq, summary_freq):
+    def train(self, sv, sess, max_epochs, progress_freq, save_freq):
         """
         Train the GAN
         """
-        print("Parameter count: ", sess.run(self.parameter_count))
-
         if self.checkpoint is not None:
             print("loading model from checkpoint")
             checkpoint = tf.train.latest_checkpoint(self.checkpoint)
@@ -273,14 +243,7 @@ class GAN(object):
                 fetches["gen_loss_GAN"] = self.gen_loss_GAN
                 fetches["gen_loss_L1"] = self.gen_loss_L1
 
-            if should(summary_freq):
-                fetches["summary"] = sv.summary_op
-
             results = sess.run(fetches)
-
-            if should(summary_freq):
-                print("Recording summary")
-                sv.summary_writer.add_summary(results["summary"], results["global_step"])
 
             if should(progress_freq):
                 train_epoch = math.ceil(results["global_step"] / self.steps_per_epoch)
