@@ -33,8 +33,7 @@ def lrelu(x, a):
     """
     Leaky ReLU
     """
-    with tf.name_scope("lrelu"):
-        return (0.5 * (1 + a)) * x + (0.5 * (1 - a)) * tf.abs(tf.identity(x))
+    return (0.5 * (1 + a)) * x + (0.5 * (1 - a)) * tf.abs(tf.identity(x))
 
 
 def batchnorm(inputs):
