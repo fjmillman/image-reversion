@@ -12,10 +12,12 @@ EPS = 1e-12
 
 
 class GAN(object):
-    def __init__(self, input_dir, output_dir, checkpoint, batch_size, ngf, ndf, lr, beta1,
+    def __init__(self, sv, sess, input_dir, output_dir, checkpoint, batch_size, ngf, ndf, lr, beta1,
                  l1_weight, gan_weight):
         """
         Args:
+            sv
+            sess
             input_dir
             output_dir
             checkpoint
@@ -27,6 +29,8 @@ class GAN(object):
             l1_weight
             gan_weight
         """
+        self.sv = sv
+        self.sess = sess
         self.input_dir = input_dir
         self.output_dir = output_dir
         self.checkpoint = checkpoint
@@ -226,42 +230,40 @@ class GAN(object):
         """
         max_steps = max_epochs * self.steps_per_epoch
 
-        sv = tf.train.Supervisor(logdir=self.output_dir, save_summaries_secs=0, saver=None)
-        with sv.managed_session() as sess:
-            start = time.time()
+        start = time.time()
 
-            for step in range(max_steps):
-                def should(freq):
-                    return freq > 0 and ((step + 1) % freq == 0 or step == max_steps - 1)
+        for step in range(max_steps):
+            def should(freq):
+                return freq > 0 and ((step + 1) % freq == 0 or step == max_steps - 1)
 
-                fetches = {
-                    "train": self.train_op,
-                    "global_step": sv.global_step,
-                }
+            fetches = {
+                "train": self.train_op,
+                "global_step": self.sv.global_step,
+            }
 
-                if should(progress_freq):
-                    fetches["discrim_loss"] = self.discrim_loss
-                    fetches["gen_loss"] = self.gen_loss
+            if should(progress_freq):
+                fetches["discrim_loss"] = self.discrim_loss
+                fetches["gen_loss"] = self.gen_loss
 
-                results = sess.run(fetches)
+            results = self.sess.run(fetches)
 
-                if should(progress_freq):
-                    # global_step will have the correct step count if we resume from a checkpoint
-                    train_epoch = math.ceil(results["global_step"] / self.steps_per_epoch)
-                    train_step = (results["global_step"] - 1) % self.steps_per_epoch + 1
-                    rate = (step + 1) * self.batch_size / (time.time() - start)
-                    remaining = (max_steps - step) * self.batch_size / rate
-                    print(f"Progress | Epoch: {train_epoch} - Step: {train_step} - Image/sec: {rate} - Remaining time: "
-                          f"{int(remaining / 60)}m")
-                    print(f"Discriminator loss: {results['discrim_loss']}")
-                    print(f"Generator loss: {results['gen_loss']}")
+            if should(progress_freq):
+                # global_step will have the correct step count if we resume from a checkpoint
+                train_epoch = math.ceil(results["global_step"] / self.steps_per_epoch)
+                train_step = (results["global_step"] - 1) % self.steps_per_epoch + 1
+                rate = (step + 1) * self.batch_size / (time.time() - start)
+                remaining = (max_steps - step) * self.batch_size / rate
+                print(f"Progress | Epoch: {train_epoch} - Step: {train_step} - Image/sec: {rate} - Remaining time: "
+                      f"{int(remaining / 60)}m")
+                print(f"Discriminator loss: {results['discrim_loss']}")
+                print(f"Generator loss: {results['gen_loss']}")
 
-                if should(save_freq):
-                    print("Saving model")
-                    self.saver.save(sess, os.path.join(self.output_dir, "model"), global_step=sv.global_step)
+            if should(save_freq):
+                print("Saving model")
+                self.saver.save(self.sess, os.path.join(self.output_dir, "model"), global_step=self.sv.global_step)
 
-                if sv.should_stop():
-                    break
+            if self.sv.should_stop():
+                break
 
     def test(self):
         """
@@ -276,21 +278,19 @@ class GAN(object):
 
         print(f"Number of images: {len(output_images)}")
 
-        sv = tf.train.Supervisor(logdir=self.output_dir, save_summaries_secs=0, saver=None)
-        with sv.managed_session() as sess:
-            start = time.time()
+        start = time.time()
 
-            # Restore from checkpoint
-            checkpoint = tf.train.latest_checkpoint(self.output_dir)
-            self.saver.restore(sess, checkpoint)
+        # Restore from checkpoint
+        checkpoint = tf.train.latest_checkpoint(self.output_dir)
+        self.saver.restore(self.sess, checkpoint)
 
-            # Save outputs
-            for step in range(self.steps_per_epoch):
-                results = sess.run(output_images)
-                filesets = save_images(results, self.output_dir)
-                for fileset in filesets:
-                    print(f"Evaluated image {fileset['name']}")
-                index_path = append_index(filesets, self.output_dir)
+        # Save outputs
+        for step in range(self.steps_per_epoch):
+            results = self.sess.run(output_images)
+            filesets = save_images(results, self.output_dir)
+            for fileset in filesets:
+                print(f"Evaluated image {fileset['name']}")
+            index_path = append_index(filesets, self.output_dir)
 
-            print(f"Wrote index at {index_path}")
-            print(f"Rate: {(time.time() - start) / self.steps_per_epoch}")
+        print(f"Wrote index at {index_path}")
+        print(f"Rate: {(time.time() - start) / self.steps_per_epoch}")

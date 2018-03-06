@@ -49,15 +49,17 @@ def main(_):
     if args.mode == "test" and args.checkpoint is None:
         raise Exception("Checkpoint is required for test mode")
 
-    # Initialise the GAN before running
-    model = GAN(args.input_dir, args.output_dir, args.checkpoint, FLAGS.batch_size, FLAGS.ngf, FLAGS.ndf, FLAGS.lr,
-                FLAGS.beta1, FLAGS.l1_weight, FLAGS.gan_weight)
+    sv = tf.train.Supervisor(logdir=args.output_dir, save_summaries_secs=0, saver=None)
+    with sv.managed_session() as sess:
+        # Initialise the GAN before running
+        model = GAN(sv, sess, args.input_dir, args.output_dir, args.checkpoint, FLAGS.batch_size, FLAGS.ngf, FLAGS.ndf, FLAGS.lr,
+                    FLAGS.beta1, FLAGS.l1_weight, FLAGS.gan_weight)
 
-    # Train or test the initialised GAN based on the chosen mode
-    if args.mode == "train":
-        model.train(FLAGS.max_epochs, FLAGS.progress_freq, FLAGS.save_freq)
-    else:
-        model.test()
+        # Train or test the initialised GAN based on the chosen mode
+        if args.mode == "train":
+            model.train(FLAGS.max_epochs, FLAGS.progress_freq, FLAGS.save_freq)
+        else:
+            model.test()
 
 
 if __name__ == '__main__':
