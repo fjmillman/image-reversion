@@ -12,8 +12,8 @@ EPS = 1e-12
 
 
 class GAN(object):
-    def __init__(self, sv, sess, input_dir, output_dir, checkpoint, batch_size, ngf, ndf, lr, beta1,
-                 l1_weight, gan_weight):
+    def __init__(self, sv, sess, input_dir, output_dir, checkpoint, paths, inputs, targets, batch_size, steps_per_epoch,
+                 ngf, ndf, lr, beta1, l1_weight, gan_weight):
         """
         Args:
             sv
@@ -21,7 +21,11 @@ class GAN(object):
             input_dir
             output_dir
             checkpoint
+            paths
+            inputs
+            targets
             batch_size
+            steps_per_epoch
             ngf
             ndf
             lr
@@ -34,7 +38,11 @@ class GAN(object):
         self.input_dir = input_dir
         self.output_dir = output_dir
         self.checkpoint = checkpoint
+        self.paths = paths
+        self.inputs = inputs
+        self.targets = targets
         self.batch_size = batch_size
+        self.steps_per_epoch = steps_per_epoch
         self.ngf = ngf
         self.ndf = ndf
         self.lr = lr
@@ -42,21 +50,8 @@ class GAN(object):
         self.l1_weight = l1_weight
         self.gan_weight = gan_weight
 
-        # Load the images from the input directory
-        paths, inputs, targets, steps_per_epoch = load_images(self.input_dir, self.batch_size)
-
-        self.paths = paths
-        self.inputs = inputs
-        self.targets = targets
-        self.steps_per_epoch = steps_per_epoch
-
         # Build the model
-        outputs, train_op, gen_loss, discrim_loss = self.build_model(inputs, targets)
-
-        self.outputs = outputs
-        self.train_op = train_op
-        self.gen_loss = gen_loss
-        self.discrim_loss = discrim_loss
+        self.outputs, self.train_op, self.gen_loss, self.discrim_loss = self.build_model(self.inputs, self.targets)
 
         self.saver = tf.train.Saver(max_to_keep=1)
 
@@ -248,7 +243,6 @@ class GAN(object):
             results = self.sess.run(fetches)
 
             if should(progress_freq):
-                # global_step will have the correct step count if we resume from a checkpoint
                 train_epoch = math.ceil(results["global_step"] / self.steps_per_epoch)
                 train_step = (results["global_step"] - 1) % self.steps_per_epoch + 1
                 rate = (step + 1) * self.batch_size / (time.time() - start)
