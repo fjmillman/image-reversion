@@ -59,7 +59,7 @@ def main():
     model = GAN(args.input_dir, args.output_dir, args.checkpoint, paths, inputs, targets, FLAGS.batch_size,
                 steps_per_epoch, FLAGS.ngf, FLAGS.ndf, FLAGS.lr, FLAGS.beta1, FLAGS.l1_weight, FLAGS.gan_weight)
 
-    # Display images for model
+    # Output images for model
     display_images = {
         "paths": paths,
         "inputs": tf.map_fn(tf.image.encode_png, convert(de_process(inputs)), dtype=tf.string, name="inputs_pngs"),
@@ -67,9 +67,7 @@ def main():
         "outputs": tf.map_fn(tf.image.encode_png, convert(de_process(model.get_outputs())), dtype=tf.string, name="output_pngs"),
     }
 
-    print(f"Number of images: {len(display_images)}")
-
-    sv = tf.train.Supervisor(logdir=None, save_summaries_secs=0, saver=None)
+    sv = tf.train.Supervisor(logdir=args.output_dir, save_summaries_secs=0, saver=None)
     with sv.managed_session() as sess:
         # Train or test the initialised GAN based on the chosen mode
         if args.mode == "train":
