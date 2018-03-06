@@ -38,7 +38,7 @@ def parse_args():
     return parser.parse_args()
 
 
-def main(_):
+def main():
     # Parse the arguments from the command line
     args = parse_args()
 
@@ -63,4 +63,4 @@ def main(_):
 
 
 if __name__ == '__main__':
-    tf.app.run()
+    main()
