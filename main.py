@@ -50,7 +50,7 @@ def main():
         raise Exception("Checkpoint is required for test mode")
 
     # Load the images from the input directory
-    paths, inputs, targets, steps_per_epoch = load_images(args.input_dir, args.batch_size)
+    paths, inputs, targets, steps_per_epoch = load_images(args.input_dir, FLAGS.batch_size)
 
     sv = tf.train.Supervisor(logdir=args.output_dir, save_summaries_secs=0, saver=None)
     with sv.managed_session() as sess:
