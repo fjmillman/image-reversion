@@ -47,7 +47,7 @@ class GAN(object):
         self.gan_weight = gan_weight
 
         # Build the model
-        self.outputs, self.train_op, self.gen_loss, self.discrim_loss, self.predict_real, self.predict_fake, self.discrim_grads_and_vars, self.gen_grads_and_vars = self.build_model(self.inputs, self.targets)
+        self.outputs, self.train_op, self.gen_loss_GAN, self.gen_loss_L1, self.discrim_loss, self.predict_real, self.predict_fake, self.discrim_grads_and_vars, self.gen_grads_and_vars = self.build_model(self.inputs, self.targets)
 
         with tf.name_scope("inputs_summary"):
             tf.summary.image("inputs", self.inputs)
@@ -65,7 +65,8 @@ class GAN(object):
             tf.summary.image("predict_fake", tf.image.convert_image_dtype(self.predict_fake, dtype=tf.uint8))
 
         tf.summary.scalar("discriminator_loss", self.discrim_loss)
-        tf.summary.scalar("generator_loss", self.gen_loss)
+        tf.summary.scalar("generator_loss_GAN", self.gen_loss_GAN)
+        tf.summary.scalar("generator_loss_L1", self.gen_loss_L1)
 
         for var in tf.trainable_variables():
             tf.summary.histogram(var.op.name + "/values", var)
@@ -130,11 +131,12 @@ class GAN(object):
         global_step = tf.train.get_or_create_global_step()
         incr_global_step = tf.assign(global_step, global_step + 1)
 
-        gen_loss = ema.average(gen_loss)
+        gen_loss_GAN = ema.average(gen_loss_GAN)
+        gen_loss_L1 = ema.average(gen_loss_L1)
         discrim_loss = ema.average(discrim_loss)
         train_op = tf.group(update_losses, incr_global_step, gen_train)
 
-        return outputs, train_op, gen_loss, discrim_loss, predict_real, predict_fake, discrim_grads_and_vars, gen_grads_and_vars
+        return outputs, train_op, gen_loss_GAN, gen_loss_L1, discrim_loss, predict_real, predict_fake, discrim_grads_and_vars, gen_grads_and_vars
 
     def generator(self, generator_inputs, generator_outputs_channels):
         """
@@ -268,7 +270,8 @@ class GAN(object):
 
             if should(progress_freq):
                 fetches["discrim_loss"] = self.discrim_loss
-                fetches["gen_loss"] = self.gen_loss
+                fetches["gen_loss_GAN"] = self.gen_loss_GAN
+                fetches["gen_loss_L1"] = self.gen_loss_L1
 
             if should(summary_freq):
                 fetches["summary"] = sv.summary_op
@@ -287,7 +290,8 @@ class GAN(object):
                 print(f"Progress | Epoch: {train_epoch} - Step: {train_step} - Image/sec: {rate} - Remaining time: "
                       f"{int(remaining / 60)}m")
                 print(f"Discriminator loss: {results['discrim_loss']}")
-                print(f"Generator loss: {results['gen_loss']}")
+                print(f"Generator loss GAN: {results['gen_loss_GAN']}")
+                print(f"Generator loss L1: {results['gen_loss_L1']}")
 
             if should(save_freq):
                 print("Saving model")
