@@ -59,7 +59,7 @@ def write_metrics(metrics, output_dir):
     """
     Write the metric results to a text file
     """
-    file = open(output_dir + 'metrics.txt', 'w')
+    file = open(output_dir + '/metrics.txt', 'w')
 
     for (mse_result, ssim_result) in metrics:
         file.write("MSE: {:.6f} - SSIM: {:.6f}\n".format(mse_result, ssim_result))

@@ -46,6 +46,14 @@ def de_process(image):
     return (image + 1) / 2
 
 
+def get_name(path):
+    """
+    Get the image filename
+    """
+    name, _ = os.path.splitext(os.path.basename(path))
+    return name
+
+
 def load_images(input_dir, batch_size):
     """
     Load images from the given input directory
@@ -57,6 +65,11 @@ def load_images(input_dir, batch_size):
 
     if len(input_paths) == 0:
         raise Exception("input_dir contains no image files")
+
+    if all(get_name(path).isdigit() for path in input_paths):
+        input_paths = sorted(input_paths, key=lambda path: int(get_name(path)))
+    else:
+        input_paths = sorted(input_paths)
 
     path_queue = tf.train.string_input_producer(input_paths, shuffle=True)
     reader = tf.WholeFileReader()
