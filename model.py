@@ -270,7 +270,7 @@ class GAN(object):
         start = time.time()
 
         # Restore from checkpoint
-        checkpoint = tf.train.latest_checkpoint(self.output_dir)
+        checkpoint = tf.train.latest_checkpoint(self.checkpoint)
         self.saver.restore(sess, checkpoint)
 
         # Save outputs
