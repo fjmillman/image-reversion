@@ -1,3 +1,6 @@
+"""
+Adapted from github.com/affinelayer/pix2pix-tensorflow
+"""
 import tensorflow as tf
 
 

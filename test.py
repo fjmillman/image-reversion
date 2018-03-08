@@ -1,6 +1,6 @@
 from __future__ import division
 from skimage import io
-from skimage.measure import compare_mse as mse, compare_ssim as ssim
+from skimage.measure import compare_mse as mse, compare_psnr as psnr, compare_ssim as ssim
 
 import os
 import glob
@@ -27,6 +27,14 @@ def read_image(image_path):
     return io.imread(image_path) / 127.5 - 1.
 
 
+def get_name(path):
+    """
+    Get the image filename
+    """
+    name, _ = os.path.splitext(os.path.basename(path))
+    return name
+
+
 def get_images(image_paths):
     """
     Get the paired images from the given image paths
@@ -34,8 +42,8 @@ def get_images(image_paths):
     images = []
 
     for (image_path_a, image_path_b) in image_paths:
-        image_a = read_image(image_path_a)
-        image_b = read_image(image_path_b)
+        image_a = get_name(image_path_a), read_image(image_path_a)
+        image_b = get_name(image_path_b), read_image(image_path_b)
         images.append((image_a, image_b))
 
     return images
@@ -45,14 +53,18 @@ def run_metrics(images):
     """
     Test the given collection of image pairs with a set of measures and return the results
     """
+    image_names = list()
     mse_results = list()
+    psnr_results = list()
     ssim_results = list()
 
-    for (image_a, image_b) in images:
+    for ((image_a_name, image_a), (image_b_name, image_b)) in images:
+        image_names.append((image_a_name, image_b_name))
         mse_results.append(mse(image_a, image_b))
+        psnr_results.append(psnr(image_a, image_b))
         ssim_results.append(ssim(image_a, image_b, multichannel=True, data_range=image_a.max() - image_b.min()))
 
-    return list(zip(mse_results, ssim_results))
+    return list(zip(image_names, mse_results, psnr_results, ssim_results))
 
 
 def write_metrics(metrics, output_dir):
@@ -61,8 +73,8 @@ def write_metrics(metrics, output_dir):
     """
     file = open(output_dir + '/metrics.txt', 'w')
 
-    for (mse_result, ssim_result) in metrics:
-        file.write("MSE: {:.6f} - SSIM: {:.6f}\n".format(mse_result, ssim_result))
+    for ((image_a_name, image_b_name), mse_result, psnr_result, ssim_result) in metrics:
+        file.write(f"Enhanced: {image_a_name} - Original: {image_b_name} -  MSE: {mse_result:.6f} - PSNR: {psnr_result:.6f} - SSIM: {ssim_result:.6f}\n")
 
 
 def main():
