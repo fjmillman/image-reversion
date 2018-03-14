@@ -19,9 +19,52 @@ def check_folder(path_dir):
         os.makedirs(path_dir)
 
 
+def check_image(image):
+    """
+    Ensure that the given image has 3 channels
+    """
+    assertion = tf.assert_equal(tf.shape(image)[-1], 3, message="image must have 3 color channels")
+    with tf.control_dependencies([assertion]):
+        image = tf.identity(image)
+
+    if image.get_shape().ndims not in (3, 4):
+        raise ValueError("image must be either 3 or 4 dimensions")
+
+    shape = list(image.get_shape())
+    shape[-1] = 3
+    image.set_shape(shape)
+
+    return image
+
+
+def rgb_to_rgbxy(image):
+    """
+    Append x and y co-ordinates to the RGB channel
+    """
+    image = check_image(image)
+
+    red_channel, green_channel, blue_channel = tf.unstack(image, axis=-1)
+
+    x_channel = [[i for i in range(0, 256)] for _ in range(0, 256)]
+    y_channel = [[i for _ in range(0, 256)] for i in range(0, 256)]
+
+    return tf.stack([red_channel, green_channel, blue_channel, x_channel, y_channel], axis=-1)
+
+
+def rgbxy_to_rgb(image):
+    """
+    Remove x and y co-ordinates from the RGBXY channel
+    """
+    image = check_image(image)
+
+    red_channel, green_channel, blue_channel, x_channel, y_channel = tf.unstack(image, axis=-1)
+
+    return tf.stack([red_channel, green_channel, blue_channel], axis=-1)
+
+
 def transform(image):
     """
-    Resize image to 256 pixels height and width
+    Resize image to 256 for use in the GAN
     """
     return tf.image.resize_images(image, [256, 256], method=tf.image.ResizeMethod.AREA)
 
@@ -79,18 +122,14 @@ def load_images(input_dir, batch_size):
     paths, contents = reader.read(path_queue)
     raw_image = tf.image.decode_png(contents)
     raw_image = tf.image.convert_image_dtype(raw_image, dtype=tf.float32)
-
-    assertion = tf.assert_equal(tf.shape(raw_image)[2], 3, message="image does not have 3 channels")
-    with tf.control_dependencies([assertion]):
-        raw_image = tf.identity(raw_image)
-
     raw_image.set_shape([None, None, 3])
 
     width = tf.shape(raw_image)[1]
-    inputs, outputs = pre_process(raw_image[:, :width // 2, :]), pre_process(raw_image[:, width // 2:, :])
-    input_images, target_images = transform(inputs), transform(outputs)
+    inputs, targets = transform(raw_image[:, :width // 2, :]), transform(raw_image[:, width // 2:, :])
+    inputs, targets = rgb_to_rgbxy(inputs), rgb_to_rgbxy(targets)
+    inputs, targets = pre_process(inputs), pre_process(targets)
 
-    paths_batch, inputs_batch, targets_batch = tf.train.batch([paths, input_images, target_images], batch_size=batch_size)
+    paths_batch, inputs_batch, targets_batch = tf.train.batch([paths, inputs, targets], batch_size=batch_size)
     steps_per_epoch = int(math.ceil(len(input_paths) / batch_size))
 
     return paths_batch, inputs_batch, targets_batch, steps_per_epoch

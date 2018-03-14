@@ -62,9 +62,9 @@ def main():
     # Output images for model
     display_images = {
         "paths": paths,
-        "inputs": tf.map_fn(tf.image.encode_png, convert(de_process(inputs)), dtype=tf.string, name="inputs_pngs"),
-        "targets": tf.map_fn(tf.image.encode_png, convert(de_process(targets)), dtype=tf.string, name="target_pngs"),
-        "outputs": tf.map_fn(tf.image.encode_png, convert(de_process(model.get_outputs())), dtype=tf.string, name="output_pngs"),
+        "inputs": tf.map_fn(tf.image.encode_png, convert(rgbxy_to_rgb(de_process(inputs))), dtype=tf.string, name="inputs_pngs"),
+        "targets": tf.map_fn(tf.image.encode_png, convert(rgbxy_to_rgb(de_process(targets))), dtype=tf.string, name="target_pngs"),
+        "outputs": tf.map_fn(tf.image.encode_png, convert(rgbxy_to_rgb(de_process(model.get_outputs()))), dtype=tf.string, name="output_pngs"),
     }
 
     sv = tf.train.Supervisor(logdir=args.output_dir, save_summaries_secs=0, saver=None)
