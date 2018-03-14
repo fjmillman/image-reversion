@@ -55,8 +55,6 @@ def rgbxy_to_rgb(image):
     """
     Remove x and y co-ordinates from the RGBXY channel
     """
-    image = check_image(image)
-
     red_channel, green_channel, blue_channel, x_channel, y_channel = tf.unstack(image, axis=-1)
 
     return tf.stack([red_channel, green_channel, blue_channel], axis=-1)
