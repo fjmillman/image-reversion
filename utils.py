@@ -45,8 +45,8 @@ def rgb_to_rgbxy(image):
 
     red_channel, green_channel, blue_channel = tf.unstack(image, axis=-1)
 
-    x_channel = [[i for i in range(0, 256)] for _ in range(0, 256)]
-    y_channel = [[i for _ in range(0, 256)] for i in range(0, 256)]
+    x_channel = [[i / 256 for i in range(0, 256)] for _ in range(0, 256)]
+    y_channel = [[i / 256 for _ in range(0, 256)] for i in range(0, 256)]
 
     return tf.stack([red_channel, green_channel, blue_channel, x_channel, y_channel], axis=-1)
 
