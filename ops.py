@@ -23,12 +23,12 @@ def gen_conv(batch_input, out_channels, stride):
                             kernel_initializer=tf.random_normal_initializer(0, 0.02))
 
 
-def gen_deconv(batch_input, out_channels):
+def gen_deconv(batch_input, out_channels, stride):
     """
     Transposed Convolution
     """
     # [batch, in_height, in_width, in_channels] => [batch, out_height, out_width, out_channels]
-    return tf.layers.conv2d_transpose(batch_input, out_channels, kernel_size=4, strides=(2, 2), padding="same",
+    return tf.layers.conv2d_transpose(batch_input, out_channels, kernel_size=4, strides=(stride, stride), padding="same",
                                       kernel_initializer=tf.random_normal_initializer(0, 0.02))
 
 

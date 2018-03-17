@@ -119,6 +119,8 @@ class GAN(object):
         """
         layers = []
 
+        # ENCODER #
+
         # encoder_1: [batch, 256, 256, in_channels] => [batch, 128, 128, ngf]
         with tf.variable_scope("encoder_1"):
             output = gen_conv(generator_inputs, self.ngf, stride=1)
@@ -143,6 +145,8 @@ class GAN(object):
                 output = batchnorm(convolved)
                 layers.append(output)
 
+        # DECODER #
+
         layer_specs = [
             (self.ngf * 8, 0.5),   # decoder_8: [batch, 1, 1, ngf * 8] => [batch, 2, 2, ngf * 8 * 2]
             (self.ngf * 8, 0.5),   # decoder_7: [batch, 2, 2, ngf * 8 * 2] => [batch, 4, 4, ngf * 8 * 2]
@@ -155,18 +159,10 @@ class GAN(object):
 
         num_encoder_layers = len(layers)
         for decoder_layer, (out_channels, dropout) in enumerate(layer_specs):
-            skip_layer = num_encoder_layers - decoder_layer - 1
-            with tf.variable_scope(f"decoder_{skip_layer + 1}"):
-                if decoder_layer == 0:
-                    # first decoder layer doesn't have skip connections
-                    # since it is directly connected to the skip_layer
-                    input = layers[-1]
-                else:
-                    input = tf.concat([layers[-1], layers[skip_layer]], axis=3)
-
-                rectified = tf.nn.relu(input)
+            with tf.variable_scope(f"decoder_{num_encoder_layers - decoder_layer}"):
+                rectified = tf.nn.relu(layers[-1])
                 # [batch, in_height, in_width, in_channels] => [batch, in_height * 2, in_width * 2, out_channels]
-                output = gen_deconv(rectified, out_channels)
+                output = gen_deconv(rectified, out_channels, stride=2)
                 output = batchnorm(output)
 
                 if dropout > 0.0:
@@ -178,7 +174,7 @@ class GAN(object):
         with tf.variable_scope("decoder_1"):
             input = tf.concat([layers[-1], layers[0]], axis=3)
             rectified = tf.nn.relu(input)
-            output = gen_deconv(rectified, generator_outputs_channels)
+            output = gen_deconv(rectified, generator_outputs_channels, stride=1)
             output = tf.tanh(output)
             layers.append(output)
 
