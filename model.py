@@ -166,7 +166,7 @@ class GAN(object):
 
                 rectified = tf.nn.relu(input)
                 # [batch, in_height, in_width, in_channels] => [batch, in_height * 2, in_width * 2, out_channels]
-                output = gen_deconv(rectified, out_channels, stride=2)
+                output = gen_deconv(rectified, out_channels)
                 output = batchnorm(output)
 
                 if dropout > 0.0:
@@ -178,7 +178,7 @@ class GAN(object):
         with tf.variable_scope("decoder_1"):
             input = tf.concat([layers[-1], layers[0]], axis=3)
             rectified = tf.nn.relu(input)
-            output = gen_deconv(rectified, generator_outputs_channels, stride=1)
+            output = gen_deconv(rectified, generator_outputs_channels)
             output = tf.tanh(output)
             layers.append(output)
 
