@@ -98,7 +98,7 @@ def get_name(path):
     return name
 
 
-def load_images(input_dir, batch_size):
+def load_images(input_dir, batch_size, mode):
     """
     Load images from the given input directory
     """
@@ -115,7 +115,7 @@ def load_images(input_dir, batch_size):
     else:
         input_paths = sorted(input_paths)
 
-    path_queue = tf.train.string_input_producer(input_paths, shuffle=True)
+    path_queue = tf.train.string_input_producer(input_paths, shuffle=mode == "train")
     reader = tf.WholeFileReader()
     paths, contents = reader.read(path_queue)
     raw_image = tf.image.decode_png(contents)

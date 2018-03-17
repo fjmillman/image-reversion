@@ -53,7 +53,7 @@ def main():
         raise Exception("Checkpoint is required for test mode")
 
     # Load the images from the input directory
-    paths, inputs, targets, steps_per_epoch = load_images(args.input_dir, FLAGS.batch_size)
+    paths, inputs, targets, steps_per_epoch = load_images(args.input_dir, FLAGS.batch_size, args.mode)
 
     # Initialise the GAN before running
     model = GAN(args.input_dir, args.output_dir, args.checkpoint, paths, inputs, targets, FLAGS.batch_size,
