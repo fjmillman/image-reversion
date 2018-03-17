@@ -62,15 +62,22 @@ def rgbxy_to_rgb(image):
 
 def transform(image):
     """
-    Resize image to 256 for use in the GAN
+    Pad the image channels with 0 to get a black border and resize the image down to 256 by 256
     """
+    image = tf.image.pad_to_bounding_box(image, 2, 2, 260, 260)
+
     return tf.image.resize_images(image, [256, 256], method=tf.image.ResizeMethod.AREA)
 
 
 def convert(image):
     """
-    Convert image type
+    Resize images to eliminate the black border and return the original image
     """
+    tf.image.resize_images(image, [260, 260], method=tf.image.ResizeMethod.BICUBIC)
+
+    offset = tf.cast(tf.floor(tf.random_uniform([2], 0, 260 - 256 + 1)), dtype=tf.int32)
+    image = tf.image.crop_to_bounding_box(image, offset[0], offset[1], 256, 256)
+
     return tf.image.convert_image_dtype(image, dtype=tf.uint8, saturate=True)
 
 
