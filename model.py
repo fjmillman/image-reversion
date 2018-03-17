@@ -161,8 +161,9 @@ class GAN(object):
         for decoder_layer, (out_channels, dropout) in enumerate(layer_specs):
             with tf.variable_scope(f"decoder_{num_encoder_layers - decoder_layer}"):
                 rectified = tf.nn.relu(layers[-1])
+                stride = 1 if num_encoder_layers - decoder_layer < 4 else 2
                 # [batch, in_height, in_width, in_channels] => [batch, in_height * 2, in_width * 2, out_channels]
-                output = gen_deconv(rectified, out_channels, stride=2)
+                output = gen_deconv(rectified, out_channels, stride)
                 output = batchnorm(output)
 
                 if dropout > 0.0:
