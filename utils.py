@@ -73,10 +73,8 @@ def convert(image):
     """
     Resize images to eliminate the black border and return the original image
     """
-    tf.image.resize_images(image, [260, 260], method=tf.image.ResizeMethod.BICUBIC)
-
-    offset = tf.cast(tf.floor(tf.random_uniform([2], 0, 260 - 256 + 1)), dtype=tf.int32)
-    image = tf.image.crop_to_bounding_box(image, offset[0], offset[1], 256, 256)
+    image = tf.image.resize_images(image, [260, 260], method=tf.image.ResizeMethod.BICUBIC)
+    image = tf.image.resize_image_with_crop_or_pad(image, 256, 256)
 
     return tf.image.convert_image_dtype(image, dtype=tf.uint8, saturate=True)
 
