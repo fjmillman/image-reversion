@@ -64,7 +64,7 @@ def pad_image(image):
     """
     Pad the image channels with 0 to get a black border and resize the image down to 256 by 256
     """
-    image = tf.image.pad_to_bounding_box(image, 5, 5, 266, 266)
+    image = tf.image.pad_to_bounding_box(image, 1, 1, 258, 258)
 
     return tf.image.resize_images(image, [256, 256], method=tf.image.ResizeMethod.AREA)
 
@@ -73,7 +73,7 @@ def unpad_image(image):
     """
     Resize images to eliminate the black border and return the original image
     """
-    image = tf.image.resize_images(image, [266, 266], method=tf.image.ResizeMethod.BICUBIC)
+    image = tf.image.resize_images(image, [258, 258], method=tf.image.ResizeMethod.BICUBIC)
 
     return tf.image.resize_image_with_crop_or_pad(image, 256, 256)
 
