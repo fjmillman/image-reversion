@@ -12,6 +12,7 @@ import time
 import argparse
 import numpy as np
 import tfimage as im
+import tensorflow as tf
 
 
 def parse_arguments():
@@ -155,9 +156,10 @@ def main():
     global start
     start = time.time()
 
-    for src_path, dst_path in zip(src_paths, dst_paths):
-        process(src_path, dst_path, args.operation, args.pad, args.size, args.b_dir)
-        complete()
+    with tf.Session() as sess:
+        for src_path, dst_path in zip(src_paths, dst_paths):
+            process(src_path, dst_path, args.operation, args.pad, args.size, args.b_dir)
+            complete()
 
 
 if __name__ == '__main__':
