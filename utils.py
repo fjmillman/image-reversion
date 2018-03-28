@@ -64,7 +64,7 @@ def pad_image(image):
     """
     Resize the image down to 252 pixels height and width before padding with a black border
     """
-    image = tf.image.resize_images(image, [252, 252], method=tf.image.ResizeMethod.AREA)
+    image = tf.image.resize_images(image, [252, 252], method=tf.image.ResizeMethod.BICUBIC)
 
     return tf.image.pad_to_bounding_box(image, 2, 2, 256, 256)
 
