@@ -62,20 +62,18 @@ def rgbxy_to_rgb(image):
 
 def pad_image(image):
     """
-    Pad the image with 0s to get a black border
+    Crop the image down to 252 pixels height and width before padding with a black border
     """
-    image = tf.image.resize_images(image, [252, 252], method=tf.image.ResizeMethod.AREA)
+    image = tf.image.resize_image_with_crop_or_pad(image, 252, 252)
 
     return tf.image.pad_to_bounding_box(image, 2, 2, 256, 256)
 
 
 def unpad_image(image):
     """
-    Resize images to eliminate the black border and return the original image
+    Crop image to eliminate the black border and return the original cropped image
     """
-    image = tf.image.resize_image_with_crop_or_pad(image, 252, 252)
-
-    return tf.image.resize_images(image, [256, 256], method=tf.image.ResizeMethod.BICUBIC)
+    return tf.image.resize_image_with_crop_or_pad(image, 252, 252)
 
 
 def convert(image):
