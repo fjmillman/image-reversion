@@ -71,7 +71,7 @@ def pad_image(image):
 
 def unpad_image(image):
     """
-    Crop image to eliminate the black border
+    Crop the image down to eliminate the black border
     """
     return tf.image.resize_image_with_crop_or_pad(image, 250, 250)
 
