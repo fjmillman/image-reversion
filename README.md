@@ -64,5 +64,25 @@ As part of my investigation, I discovered a limitation of the GAN in its ability
 
 The vignette dataset can be downloaded [here](https://drive.google.com/open?id=1HyV3JdNVMblKW9AYLe_xDwfZlIREPk7T).
 
+## The Results
+
+### Testing the Removal of Individual Enhancements
+
+The first part of my investigation looked at training the model up on each of the six datasets individually.
+
+![Results for individual enhancements](images/results-u-net.png)
+
+### Testing the Removal of Combined Enhancements
+
+The second part of my investigation looked at training the model up on the combined superset.
+
+![Results for combined enhancements](images/results-u-net-combined.png)
+
+### Testing the Removal of Different Enhancements
+
+The final part of my investigation looked at testing the test dataset on the model trained using the combined superset.
+
+![Results for different enhancements](images/results-u-net-test.png)
+
 ## Acknowledgements
 This implementation is based on a port of [pix2pix](https://github.com/phillipi/pix2pix) from PyTorch to Tensorflow which was written by [affinelayer](https://github.com/affinelayer/pix2pix-tensorflow). 
