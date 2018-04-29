@@ -60,22 +60,6 @@ def rgbxy_to_rgb(image):
     return tf.stack([red_channel, green_channel, blue_channel], axis=-1)
 
 
-def pad_image(image):
-    """
-    Crop the image down to 250 pixels height and width before padding with a black border
-    """
-    image = tf.image.resize_image_with_crop_or_pad(image, 250, 250)
-
-    return tf.image.pad_to_bounding_box(image, 3, 3, 256, 256)
-
-
-def unpad_image(image):
-    """
-    Crop the image down to eliminate the black border
-    """
-    return tf.image.resize_image_with_crop_or_pad(image, 250, 250)
-
-
 def convert(image):
     """
     Convert image to original type
@@ -132,7 +116,7 @@ def load_images(input_dir, batch_size, mode):
     raw_image.set_shape([None, None, 3])
 
     width = tf.shape(raw_image)[1]
-    inputs, targets = pad_image(raw_image[:, :width // 2, :]), pad_image(raw_image[:, width // 2:, :])
+    inputs, targets = raw_image[:, :width // 2, :], raw_image[:, width // 2:, :]
     inputs, targets = rgb_to_rgbxy(inputs), rgb_to_rgbxy(targets)
     inputs, targets = pre_process(inputs), pre_process(targets)
 
