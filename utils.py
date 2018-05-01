@@ -37,6 +37,45 @@ def check_image(image):
     return image
 
 
+def rgb_to_rgbxy(image):
+    """
+    Append x and y co-ordinates to the RGB channel
+    """
+    image = check_image(image)
+
+    red_channel, green_channel, blue_channel = tf.unstack(image, axis=-1)
+
+    x_channel = [[i / 256 for i in range(0, 256)] for _ in range(0, 256)]
+    y_channel = [[i / 256 for _ in range(0, 256)] for i in range(0, 256)]
+
+    return tf.stack([red_channel, green_channel, blue_channel, x_channel, y_channel], axis=-1)
+
+
+def rgbxy_to_rgb(image):
+    """
+    Remove x and y co-ordinates from the RGBXY channel
+    """
+    red_channel, green_channel, blue_channel, x_channel, y_channel = tf.unstack(image, axis=-1)
+
+    return tf.stack([red_channel, green_channel, blue_channel], axis=-1)
+
+
+def pad_image(image):
+    """
+    Crop the image down to 250 pixels height and width before padding with a black border
+    """
+    image = tf.image.resize_image_with_crop_or_pad(image, 250, 250)
+
+    return tf.image.pad_to_bounding_box(image, 3, 3, 256, 256)
+
+
+def unpad_image(image):
+    """
+    Crop the image down to eliminate the black border
+    """
+    return tf.image.resize_image_with_crop_or_pad(image, 250, 250)
+
+
 def convert(image):
     """
     Convert image to original type
@@ -58,13 +97,6 @@ def de_process(image):
     """
     # [-1, 1] => [0, 1]
     return (image + 1) / 2
-
-
-def transform(image):
-    """
-    Resize image to 256 pixels height and width
-    """
-    return tf.image.resize_images(image, [256, 256], method=tf.image.ResizeMethod.AREA)
 
 
 def get_name(path):
@@ -100,9 +132,9 @@ def load_images(input_dir, batch_size, mode):
     raw_image.set_shape([None, None, 3])
 
     width = tf.shape(raw_image)[1]
-    inputs, targets = raw_image[:, :width // 2, :], raw_image[:, width // 2:, :]
+    inputs, targets = pad_image(raw_image[:, :width // 2, :]), pad_image(raw_image[:, width // 2:, :])
+    inputs, targets = rgb_to_rgbxy(inputs), rgb_to_rgbxy(targets)
     inputs, targets = pre_process(inputs), pre_process(targets)
-    inputs, targets = transform(inputs), transform(targets)
 
     paths_batch, inputs_batch, targets_batch = tf.train.batch([paths, inputs, targets], batch_size=batch_size)
     steps_per_epoch = int(math.ceil(len(input_paths) / batch_size))
