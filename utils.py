@@ -37,29 +37,6 @@ def check_image(image):
     return image
 
 
-def rgb_to_rgbxy(image):
-    """
-    Append x and y co-ordinates to the RGB channel
-    """
-    image = check_image(image)
-
-    red_channel, green_channel, blue_channel = tf.unstack(image, axis=-1)
-
-    x_channel = [[i / 256 for i in range(0, 256)] for _ in range(0, 256)]
-    y_channel = [[i / 256 for _ in range(0, 256)] for i in range(0, 256)]
-
-    return tf.stack([red_channel, green_channel, blue_channel, x_channel, y_channel], axis=-1)
-
-
-def rgbxy_to_rgb(image):
-    """
-    Remove x and y co-ordinates from the RGBXY channel
-    """
-    red_channel, green_channel, blue_channel, x_channel, y_channel = tf.unstack(image, axis=-1)
-
-    return tf.stack([red_channel, green_channel, blue_channel], axis=-1)
-
-
 def convert(image):
     """
     Convert image to original type
@@ -117,7 +94,6 @@ def load_images(input_dir, batch_size, mode):
 
     width = tf.shape(raw_image)[1]
     inputs, targets = raw_image[:, :width // 2, :], raw_image[:, width // 2:, :]
-    inputs, targets = rgb_to_rgbxy(inputs), rgb_to_rgbxy(targets)
     inputs, targets = pre_process(inputs), pre_process(targets)
 
     paths_batch, inputs_batch, targets_batch = tf.train.batch([paths, inputs, targets], batch_size=batch_size)
