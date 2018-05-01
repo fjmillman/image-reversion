@@ -60,6 +60,13 @@ def de_process(image):
     return (image + 1) / 2
 
 
+def transform(image):
+    """
+    Resize image to 256 pixels height and width
+    """
+    return tf.image.resize_images(image, [256, 256], method=tf.image.ResizeMethod.AREA)
+
+
 def get_name(path):
     """
     Get the image filename
@@ -95,6 +102,7 @@ def load_images(input_dir, batch_size, mode):
     width = tf.shape(raw_image)[1]
     inputs, targets = raw_image[:, :width // 2, :], raw_image[:, width // 2:, :]
     inputs, targets = pre_process(inputs), pre_process(targets)
+    inputs, targets = transform(inputs), transform(targets)
 
     paths_batch, inputs_batch, targets_batch = tf.train.batch([paths, inputs, targets], batch_size=batch_size)
     steps_per_epoch = int(math.ceil(len(input_paths) / batch_size))
