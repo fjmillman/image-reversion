@@ -136,7 +136,7 @@ class GAN(object):
             self.ngf * 8,  # encoder_8: [batch, 2, 2, ngf * 8] => [batch, 1, 1, ngf * 8]
         ]
 
-        for encoder_layer, out_channels in enumerate(layer_specs):
+        for out_channels in layer_specs:
             with tf.variable_scope(f"encoder_{len(layers) + 1}"):
                 rectified = lrelu(layers[-1], 0.2)
                 # [batch, in_height, in_width, in_channels] => [batch, in_height / 2, in_width / 2, out_channels]

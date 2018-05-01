@@ -16,10 +16,9 @@ def parse_arguments():
     """
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--image_dir_a", type=str, required=True, help="path to folder containing first set of images")
-    parser.add_argument("--image_dir_b", type=str, required=True, help="path to folder containing second set of images")
+    parser.add_argument("--image_dir", type=str, required=True, help="path to folder containing the images")
     parser.add_argument("--output_dir", type=str, required=True, help="path to folder to write the results")
-    parser.add_argument("--operation", type=str, required=True, choices=["metrics", "heatmaps"], help="run metrics or generate heatmaps")
+    parser.add_argument("--operation", type=str, required=True, choices=["metrics", "difference"], help="run metrics or generate difference images")
 
     return parser.parse_args()
 
@@ -39,6 +38,15 @@ def read_image(image_path):
     return io.imread(image_path) / 127.5 - 1.
 
 
+def get_name(path):
+    """
+    Get the image filename
+    """
+    name, _ = os.path.splitext(os.path.basename(path))
+
+    return name
+
+
 def get_images(image_paths):
     """
     Get the paired images from the given image paths
@@ -46,8 +54,8 @@ def get_images(image_paths):
     images = []
 
     for (image_path_a, image_path_b) in image_paths:
-        image_a = read_image(image_path_a)
-        image_b = read_image(image_path_b)
+        image_a = get_name(image_path_a), read_image(image_path_a)
+        image_b = get_name(image_path_b), read_image(image_path_b)
         images.append((image_a, image_b))
 
     return images
@@ -60,7 +68,7 @@ def run_metrics(images):
     mse_results = list()
     ssim_results = list()
 
-    for (image_a, (image_b)) in images:
+    for ((image_a_name, image_a), (image_b_name, image_b)) in images:
         mse_results.append(mse(image_a, image_b))
         ssim_results.append(ssim(image_a, image_b, multichannel=True, data_range=image_a.max() - image_b.min()))
 
@@ -86,9 +94,9 @@ def write_metrics(metrics, output_dir):
     file.write(f"SSIM Average: {ssim_average:.5f}\n")
 
 
-def generate_heatmaps(images, output_dir):
+def generate_difference_images(images, output_dir):
     """
-    Generate heatmaps for each image pair to show difference
+    Generate a difference image for each image pair to show difference
     """
     for ((image_a_name, image_a), (image_b_name, image_b)) in images:
         error_r = np.fabs(np.subtract(image_b[:, :, 0], image_a[:, :, 0]))
@@ -100,7 +108,7 @@ def generate_heatmaps(images, output_dir):
         image_plot.set_cmap('binary')
         plt.axis('off')
 
-        filename = f"{image_b_name}-heatmap.png"
+        filename = f"{image_b_name}-difference.png"
         out_path = os.path.join(output_dir, filename)
         pylab.savefig(out_path, bbox_inches='tight', pad_inches=0)
 
@@ -108,23 +116,20 @@ def generate_heatmaps(images, output_dir):
 def main():
     args = parse_arguments()
 
-    if args.image_dir_a is None or not os.path.exists(args.image_dir_a):
-        raise Exception("image_dir_a does not exist")
-
-    if args.image_dir_b is None or not os.path.exists(args.image_dir_b):
-        raise Exception("image_dir_b does not exist")
+    if args.image_dir is None or not os.path.exists(args.image_dir):
+        raise Exception("image_dir does not exist")
 
     check_folder(args.output_dir)
 
-    image_paths_a = sorted(glob.glob(os.path.join(args.image_dir_a, "*.png")))
+    image_paths_a = sorted(glob.glob(os.path.join(args.image_dir, "*outputs*.png")))
 
     if len(image_paths_a) == 0:
-        raise Exception("image_dir_a contains no image files")
+        raise Exception("image_dir contains no output images")
 
-    image_paths_b = sorted(glob.glob(os.path.join(args.image_dir_b, "*.png")))
+    image_paths_b = sorted(glob.glob(os.path.join(args.image_dir, "*targets*.png")))
 
     if len(image_paths_b) != len(image_paths_a):
-        raise Exception("image_dir_b must contain the same number of image files as image_dir_a")
+        raise Exception("image_dir must contain the same number of target and output images")
 
     image_paths = list(zip(image_paths_a, image_paths_b))
 
@@ -133,10 +138,10 @@ def main():
     if args.operation == "metrics":
         metrics = run_metrics(images)
         write_metrics(metrics, args.output_dir)
-    elif args.operation == "heatmaps":
-        generate_heatmaps(images, args.output_dir)
+    elif args.operation == "difference":
+        generate_difference_images(images, args.output_dir)
     else:
-        raise Exception("operation must be 'metrics' or 'heatmaps'")
+        raise Exception("operation must be 'metrics' or 'difference'")
 
 
 if __name__ == '__main__':
