@@ -136,7 +136,7 @@ class GAN(object):
             self.ngf * 8,  # encoder_8: [batch, 2, 2, ngf * 8] => [batch, 1, 1, ngf * 8]
         ]
 
-        for out_channels in layer_specs:
+        for encoder_layer, out_channels in enumerate(layer_specs):
             with tf.variable_scope(f"encoder_{len(layers) + 1}"):
                 rectified = lrelu(layers[-1], 0.2)
                 # [batch, in_height, in_width, in_channels] => [batch, in_height / 2, in_width / 2, out_channels]
@@ -158,16 +158,8 @@ class GAN(object):
 
         num_encoder_layers = len(layers)
         for decoder_layer, (out_channels, dropout) in enumerate(layer_specs):
-            skip_layer = num_encoder_layers - decoder_layer - 1
-            with tf.variable_scope(f"decoder_{skip_layer + 1}"):
-                if decoder_layer == 0:
-                    # first decoder layer doesn't have skip connections
-                    # since it is directly connected to the skip_layer
-                    input = layers[-1]
-                else:
-                    input = tf.concat([layers[-1], layers[skip_layer]], axis=3)
-
-                rectified = tf.nn.relu(input)
+            with tf.variable_scope(f"decoder_{num_encoder_layers - decoder_layer}"):
+                rectified = tf.nn.relu(layers[-1])
                 # [batch, in_height, in_width, in_channels] => [batch, in_height * 2, in_width * 2, out_channels]
                 output = gen_deconv(rectified, out_channels)
                 output = batchnorm(output)
