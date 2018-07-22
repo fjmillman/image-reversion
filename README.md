@@ -1,6 +1,6 @@
 # An Investigation Into Reverting Image Enhancements Using Deep Learning
 
-As part of my individual project, I decided to tackle the issue of reverting image enhancements with the use of a Generative Adversarial Network (GAN) as my approach.
+As part of my individual project, I decided to tackle the issue of reverting image enhancements with the use of a Generative Adversarial Network (GAN) as my approach. The work undertaken and the results synthesised from the investigation can be found in my dissertation [here](https://drive.google.com/file/d/1-eDPRqVZdMpUTKicEDq2_d0SUwEm6ynP/view?usp=sharing).
 
 ![A preview of the dataset generated](images/example-gan.png)
 
